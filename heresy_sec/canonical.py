@@ -23,13 +23,14 @@ DOMAINS = MappingProxyType(
 )
 
 MAX_SAFE_INTEGER = 2**53 - 1
+MAX_JSON_NESTING = 128
 
 
 def _invalid(message: str) -> HeresySecError:
     return HeresySecError("CANONICAL_INVALID", message)
 
 
-def _validate(value: Any, active: set[int]) -> None:
+def _validate(value: Any, active: set[int], depth: int = 0) -> None:
     if value is None or type(value) in (str, bool):
         if type(value) is str:
             try:
@@ -44,15 +45,19 @@ def _validate(value: Any, active: set[int]) -> None:
     if type(value) is float:
         raise _invalid("floating-point values are forbidden in canonical identity")
     if type(value) is list:
+        if depth >= MAX_JSON_NESTING:
+            raise _invalid(f"canonical JSON nesting cannot exceed {MAX_JSON_NESTING}")
         marker = id(value)
         if marker in active:
             raise _invalid("canonical JSON cannot encode cycles")
         active.add(marker)
         for item in value:
-            _validate(item, active)
+            _validate(item, active, depth + 1)
         active.remove(marker)
         return
     if type(value) is dict:
+        if depth >= MAX_JSON_NESTING:
+            raise _invalid(f"canonical JSON nesting cannot exceed {MAX_JSON_NESTING}")
         marker = id(value)
         if marker in active:
             raise _invalid("canonical JSON cannot encode cycles")
@@ -60,7 +65,7 @@ def _validate(value: Any, active: set[int]) -> None:
         for key, item in value.items():
             if type(key) is not str:
                 raise _invalid("canonical mapping keys must be strings")
-            _validate(item, active)
+            _validate(item, active, depth + 1)
         active.remove(marker)
         return
     raise _invalid(f"unsupported canonical type: {type(value).__name__}")
@@ -69,7 +74,10 @@ def _validate(value: Any, active: set[int]) -> None:
 def canonical_json(value: Any) -> str:
     """Return compact UTF-8 JSON with recursively sorted object keys."""
 
-    _validate(value, set())
+    try:
+        _validate(value, set())
+    except RecursionError as exc:
+        raise _invalid("canonical JSON nesting is too deep") from exc
     try:
         return json.dumps(
             value,
@@ -78,7 +86,7 @@ def canonical_json(value: Any) -> str:
             sort_keys=True,
             separators=(",", ":"),
         )
-    except (TypeError, ValueError, UnicodeEncodeError) as exc:
+    except (TypeError, ValueError, UnicodeEncodeError, RecursionError) as exc:
         raise _invalid("value cannot be serialized canonically") from exc
 
 
@@ -139,14 +147,36 @@ def parse_json_bytes(raw: bytes) -> Any:
         parse_float=reject_float,
         parse_constant=reject_constant,
     )
+    start = 0
+    while start < len(text) and text[start] in " \t\r\n":
+        start += 1
+    if start == len(text):
+        raise HeresySecError("JSON_INVALID", "input is not one valid JSON value")
     try:
-        value, end = decoder.raw_decode(text)
+        value, end = decoder.raw_decode(text, start)
     except HeresySecError:
         raise
+    except RecursionError as exc:
+        raise HeresySecError(
+            "JSON_NESTING_TOO_DEEP",
+            "JSON input exceeds the supported nesting depth",
+        ) from exc
     except (ValueError, TypeError) as exc:
         raise HeresySecError("JSON_INVALID", "input is not one valid JSON value") from exc
-    if text[end:].strip():
+    if any(character not in " \t\r\n" for character in text[end:]):
         raise HeresySecError("JSON_TRAILING_DATA", "JSON input has trailing data")
-    canonical_bytes(value)
+    try:
+        canonical_bytes(value)
+    except HeresySecError as exc:
+        if exc.code == "CANONICAL_INVALID" and "nesting" in exc.message:
+            raise HeresySecError(
+                "JSON_NESTING_TOO_DEEP",
+                "JSON input exceeds the supported nesting depth",
+            ) from exc
+        raise
+    except RecursionError as exc:
+        raise HeresySecError(
+            "JSON_NESTING_TOO_DEEP",
+            "JSON input exceeds the supported nesting depth",
+        ) from exc
     return value
-

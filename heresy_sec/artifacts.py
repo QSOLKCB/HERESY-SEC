@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Mapping
 
 from .canonical import DOMAINS, canonical_bytes, domain_hash, parse_json_bytes, sha256_bytes, without_self_hash
@@ -69,6 +69,51 @@ def build_manifest(files: Mapping[str, bytes], run_id: str) -> bytes:
     return canonical_bytes(core)
 
 
+def _inspect_run_tree(root: Path) -> tuple[set[str], set[str]]:
+    pending = [root]
+    files: set[str] = set()
+    directories: set[str] = set()
+    while pending:
+        directory = pending.pop()
+        try:
+            entries = sorted(directory.iterdir(), key=lambda path: path.name)
+        except OSError as exc:
+            raise HeresySecError(
+                "RUN_DIRECTORY_INVALID",
+                "run directory could not be enumerated",
+            ) from exc
+        children: list[Path] = []
+        for path in entries:
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                raise HeresySecError(
+                    "MANIFEST_ENTRY_UNSAFE",
+                    f"run contains a symbolic link: {relative}",
+                )
+            if path.is_dir():
+                directories.add(relative)
+                children.append(path)
+            elif path.is_file():
+                files.add(relative)
+            else:
+                raise HeresySecError(
+                    "MANIFEST_ENTRY_UNSAFE",
+                    f"run contains a non-regular entry: {relative}",
+                )
+        pending.extend(reversed(children))
+    return files, directories
+
+
+def _expected_directories(files: set[str]) -> set[str]:
+    directories: set[str] = set()
+    for relative in files:
+        parent = PurePosixPath(relative).parent
+        while parent != PurePosixPath("."):
+            directories.add(parent.as_posix())
+            parent = parent.parent
+    return directories
+
+
 def write_artifacts(run_dir: Path, files: Mapping[str, bytes]) -> None:
     try:
         if run_dir.is_symlink():
@@ -129,7 +174,8 @@ def verify_manifest(run_dir: Path) -> dict[str, object]:
         raise HeresySecError("RUN_DIRECTORY_INVALID", "run directory is invalid")
     manifest_path = root / "manifest.json"
     try:
-        manifest = parse_json_bytes(manifest_path.read_bytes())
+        manifest_raw = manifest_path.read_bytes()
+        manifest = parse_json_bytes(manifest_raw)
     except OSError as exc:
         raise HeresySecError("MANIFEST_MISSING", "manifest.json is missing") from exc
     if type(manifest) is not dict or set(manifest) != {
@@ -152,6 +198,11 @@ def verify_manifest(run_dir: Path) -> dict[str, object]:
     )
     if manifest["manifest_sha256"] != expected_manifest_hash:
         raise HeresySecError("MANIFEST_HASH_MISMATCH", "manifest self-hash is invalid")
+    if manifest_raw != canonical_bytes(manifest):
+        raise HeresySecError(
+            "MANIFEST_CANONICAL_MISMATCH",
+            "manifest.json is not canonical",
+        )
 
     declared: set[str] = set()
     for row in manifest["files"]:
@@ -178,15 +229,20 @@ def verify_manifest(run_dir: Path) -> dict[str, object]:
             or any(parent.is_symlink() for parent in unresolved.parents if parent != root)
         ):
             raise HeresySecError("MANIFEST_ARTIFACT_MISSING", f"artifact is missing or unsafe: {relative}")
-        body = target.read_bytes()
+        try:
+            body = target.read_bytes()
+        except OSError as exc:
+            raise HeresySecError(
+                "MANIFEST_ARTIFACT_MISSING",
+                f"artifact could not be read: {relative}",
+            ) from exc
         if len(body) != row["byte_length"] or sha256_bytes(body) != row["sha256"]:
             raise HeresySecError("MANIFEST_ARTIFACT_TAMPERED", f"artifact hash mismatch: {relative}")
-    actual = {
-        path.relative_to(root).as_posix()
-        for path in root.rglob("*")
-        if path.is_file()
-    }
-    if actual != declared | {"manifest.json"}:
+    actual_files, actual_directories = _inspect_run_tree(root)
+    if (
+        actual_files != declared | {"manifest.json"}
+        or actual_directories != _expected_directories(declared)
+    ):
         raise HeresySecError("MANIFEST_FILE_SET_MISMATCH", "run has missing or undeclared files")
     return {
         "status": "PASS",

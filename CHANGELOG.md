@@ -24,6 +24,14 @@ All notable changes to HERESY-SEC are documented here.
 - Rejected symbolic links at every archive-tree level before recursion.
 - Accepted lower-case RFC-style network schemes containing `+`, `.` or `-`.
 - Updated the MPL 2.0 Exhibit A link to Mozilla's current HTTPS URL.
+- Rejected undeclared symbolic links, special entries and directories during manifest
+  verification.
+- Accepted JSON whitespace before the top-level value while preserving exact captured
+  bytes.
+- Enforced canonical stored bytes for decisions and receipts during verification and
+  replay.
+- Bounded canonical JSON nesting and converted parser recursion into controlled
+  failures.
 
 ## [0.1.0] - 2026-07-30
 

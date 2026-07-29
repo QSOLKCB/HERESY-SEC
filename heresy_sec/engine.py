@@ -292,6 +292,18 @@ def _semantic_records(
         raise HeresySecError("POLICY_CANONICAL_MISMATCH", "stored policy is not canonical")
 
     implementation = normalize_implementation(_read_run_json(root, "implementation.json"))
+    if _read_bytes(root / "implementation.json", "implementation") != canonical_bytes(
+        implementation
+    ):
+        raise HeresySecError(
+            "IMPLEMENTATION_CANONICAL_MISMATCH",
+            "implementation record is not canonical",
+        )
+    if _read_bytes(root / "README_ORIGIN.txt", "run origin") != README_ORIGIN:
+        raise HeresySecError(
+            "RUN_ORIGIN_MISMATCH",
+            "run origin notice differs from the implementation",
+        )
     raw_actions: list[bytes] = []
     actions: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
@@ -305,8 +317,20 @@ def _semantic_records(
             raise HeresySecError("ACTION_CAPTURE_MISMATCH", f"capture differs from action {stem}")
         if (root / "actions" / f"{stem}.json").read_bytes() != canonical_bytes(action):
             raise HeresySecError("ACTION_CANONICAL_MISMATCH", f"action is not canonical: {stem}")
-        decision = normalize_decision(_read_run_json(root, f"decisions/{stem}.json"))
-        receipt = normalize_receipt(_read_run_json(root, f"receipts/{stem}.json"))
+        decision_relative = f"decisions/{stem}.json"
+        receipt_relative = f"receipts/{stem}.json"
+        decision = normalize_decision(_read_run_json(root, decision_relative))
+        receipt = normalize_receipt(_read_run_json(root, receipt_relative))
+        if _read_bytes(root / decision_relative, f"decision {stem}") != canonical_bytes(decision):
+            raise HeresySecError(
+                "DECISION_CANONICAL_MISMATCH",
+                f"decision is not canonical: {stem}",
+            )
+        if _read_bytes(root / receipt_relative, f"receipt {stem}") != canonical_bytes(receipt):
+            raise HeresySecError(
+                "RECEIPT_CANONICAL_MISMATCH",
+                f"receipt is not canonical: {stem}",
+            )
         if decision["action_sha256"] != action_identity(action):
             raise HeresySecError("DECISION_LINEAGE_MISMATCH", f"decision does not bind action {stem}")
         if decision["policy_sha256"] != policy_identity(policy):

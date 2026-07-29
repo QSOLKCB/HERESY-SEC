@@ -7,8 +7,8 @@ from io import BytesIO
 from pathlib import Path
 
 from heresy_sec.archive import deterministic_zip_bytes, pack_run
-from heresy_sec.artifacts import safe_run_directory, write_artifacts
-from heresy_sec.canonical import canonical_bytes
+from heresy_sec.artifacts import build_manifest, safe_run_directory, write_artifacts
+from heresy_sec.canonical import canonical_bytes, parse_json_bytes
 from heresy_sec.engine import (
     demo_documents,
     inspect_run,
@@ -73,6 +73,105 @@ class EngineTests(unittest.TestCase):
             (run_dir / "summary.json").write_bytes(b"{}\n")
             with self.assertRaises(HeresySecError):
                 verify_run_directory(run_dir)
+
+    def test_manifest_rejects_undeclared_symlinked_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir, _ = run_actions(
+                [canonical_bytes(self.action)],
+                canonical_bytes(self.policy),
+                root,
+                run_name="manifest-symlink",
+            )
+            outside = root / "outside"
+            outside.mkdir()
+            (outside / "secret.txt").write_text("not run evidence", encoding="utf-8")
+            (run_dir / "undeclared-link").symlink_to(
+                outside,
+                target_is_directory=True,
+            )
+            with self.assertRaises(HeresySecError) as raised:
+                verify_run_directory(run_dir)
+            self.assertEqual(raised.exception.code, "MANIFEST_ENTRY_UNSAFE")
+
+    def test_decision_and_receipt_files_require_canonical_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for run_name, relative, error_code in (
+                ("decision-format", "decisions/000000.json", "DECISION_CANONICAL_MISMATCH"),
+                ("receipt-format", "receipts/000000.json", "RECEIPT_CANONICAL_MISMATCH"),
+            ):
+                with self.subTest(relative=relative):
+                    run_dir, report = run_actions(
+                        [canonical_bytes(self.action)],
+                        canonical_bytes(self.policy),
+                        root,
+                        run_name=run_name,
+                    )
+                    target = run_dir / relative
+                    value = parse_json_bytes(target.read_bytes())
+                    target.write_bytes(b" " + canonical_bytes(value) + b"\n")
+                    files = {
+                        path.relative_to(run_dir).as_posix(): path.read_bytes()
+                        for path in run_dir.rglob("*")
+                        if path.is_file() and path.name != "manifest.json"
+                    }
+                    (run_dir / "manifest.json").write_bytes(
+                        build_manifest(files, report["run_id"])
+                    )
+                    with self.assertRaises(HeresySecError) as raised:
+                        replay_run(run_dir)
+                    self.assertEqual(raised.exception.code, error_code)
+
+    def test_generated_metadata_requires_exact_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for run_name, relative, replacement, error_code in (
+                (
+                    "implementation-format",
+                    "implementation.json",
+                    lambda body: b" " + body,
+                    "IMPLEMENTATION_CANONICAL_MISMATCH",
+                ),
+                (
+                    "origin-format",
+                    "README_ORIGIN.txt",
+                    lambda body: body + b"changed\n",
+                    "RUN_ORIGIN_MISMATCH",
+                ),
+            ):
+                with self.subTest(relative=relative):
+                    run_dir, report = run_actions(
+                        [canonical_bytes(self.action)],
+                        canonical_bytes(self.policy),
+                        root,
+                        run_name=run_name,
+                    )
+                    target = run_dir / relative
+                    target.write_bytes(replacement(target.read_bytes()))
+                    files = {
+                        path.relative_to(run_dir).as_posix(): path.read_bytes()
+                        for path in run_dir.rglob("*")
+                        if path.is_file() and path.name != "manifest.json"
+                    }
+                    (run_dir / "manifest.json").write_bytes(
+                        build_manifest(files, report["run_id"])
+                    )
+                    with self.assertRaises(HeresySecError) as raised:
+                        verify_run_directory(run_dir)
+                    self.assertEqual(raised.exception.code, error_code)
+
+            run_dir, _ = run_actions(
+                [canonical_bytes(self.action)],
+                canonical_bytes(self.policy),
+                root,
+                run_name="manifest-format",
+            )
+            manifest = run_dir / "manifest.json"
+            manifest.write_bytes(b" " + manifest.read_bytes())
+            with self.assertRaises(HeresySecError) as raised:
+                verify_run_directory(run_dir)
+            self.assertEqual(raised.exception.code, "MANIFEST_CANONICAL_MISMATCH")
 
             run_dir, _ = run_actions(
                 [canonical_bytes(self.action)],
