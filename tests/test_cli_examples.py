@@ -50,6 +50,27 @@ class CliAndExampleTests(unittest.TestCase):
         error = json.loads(result.stderr)
         self.assertEqual(error["error_code"], "CLI_ARGUMENT_INVALID")
 
+    def test_output_path_failure_is_canonical_json(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runs_file = root / "runs"
+            runs_file.write_text("preserve", encoding="utf-8")
+            result = self.command(
+                "run",
+                str(ROOT / "examples" / "file_integrity" / "action.json"),
+                "--policy",
+                str(ROOT / "examples" / "file_integrity" / "policy.json"),
+                "--runs-dir",
+                str(runs_file),
+                "--run-name",
+                "controlled-error",
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(result.stdout, "")
+            error = json.loads(result.stderr)
+            self.assertEqual(error["error_code"], "OUTPUT_PATH_UNSAFE")
+            self.assertEqual(runs_file.read_text(encoding="utf-8"), "preserve")
+
     def test_examples_have_expected_effects(self) -> None:
         expected = {
             "file_integrity": ("ALLOWED", 0),
@@ -77,4 +98,3 @@ class CliAndExampleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

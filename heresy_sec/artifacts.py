@@ -23,21 +23,32 @@ README_ORIGIN = (
 def safe_run_directory(runs_root: Path, run_name: str) -> Path:
     if not RUN_NAME_RE.fullmatch(run_name) or run_name in {".", ".."}:
         raise HeresySecError("OUTPUT_PATH_UNSAFE", "run name is unsafe")
-    if runs_root.is_symlink():
-        raise HeresySecError("OUTPUT_PATH_UNSAFE", "runs root cannot be a symbolic link")
-    root = runs_root.resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    target = (root / run_name).resolve()
-    if target.parent != root:
-        raise HeresySecError("OUTPUT_PATH_UNSAFE", "run directory must be a direct child of runs root")
-    if target.exists():
-        if target.is_symlink() or not target.is_dir():
-            raise HeresySecError("OUTPUT_PATH_UNSAFE", "run target is not a safe directory")
-        if any(target.iterdir()):
-            raise HeresySecError("OUTPUT_DIRECTORY_NOT_EMPTY", "run output directory is not empty")
-    else:
-        target.mkdir(mode=0o755)
-    return target
+    try:
+        if runs_root.is_symlink():
+            raise HeresySecError("OUTPUT_PATH_UNSAFE", "runs root cannot be a symbolic link")
+        root = runs_root.resolve()
+        if root.exists() and not root.is_dir():
+            raise HeresySecError("OUTPUT_PATH_UNSAFE", "runs root must be a directory")
+        root.mkdir(parents=True, exist_ok=True)
+        target = (root / run_name).resolve()
+        if target.parent != root:
+            raise HeresySecError(
+                "OUTPUT_PATH_UNSAFE",
+                "run directory must be a direct child of runs root",
+            )
+        if target.exists():
+            if target.is_symlink() or not target.is_dir():
+                raise HeresySecError("OUTPUT_PATH_UNSAFE", "run target is not a safe directory")
+            if any(target.iterdir()):
+                raise HeresySecError("OUTPUT_DIRECTORY_NOT_EMPTY", "run output directory is not empty")
+        else:
+            target.mkdir(mode=0o755)
+        return target
+    except OSError as exc:
+        raise HeresySecError(
+            "OUTPUT_IO_ERROR",
+            "run output directory could not be prepared",
+        ) from exc
 
 
 def build_manifest(files: Mapping[str, bytes], run_id: str) -> bytes:
@@ -59,11 +70,15 @@ def build_manifest(files: Mapping[str, bytes], run_id: str) -> bytes:
 
 
 def write_artifacts(run_dir: Path, files: Mapping[str, bytes]) -> None:
-    if run_dir.is_symlink():
-        raise HeresySecError("OUTPUT_PATH_UNSAFE", "run directory cannot be a symbolic link")
-    root = run_dir.resolve()
-    if not root.is_dir():
-        raise HeresySecError("OUTPUT_PATH_UNSAFE", "run directory is not safe")
+    try:
+        if run_dir.is_symlink():
+            raise HeresySecError("OUTPUT_PATH_UNSAFE", "run directory cannot be a symbolic link")
+        root = run_dir.resolve()
+        if not root.is_dir():
+            raise HeresySecError("OUTPUT_PATH_UNSAFE", "run directory is not safe")
+    except OSError as exc:
+        raise HeresySecError("ARTIFACT_WRITE_FAILED", "artifact root could not be inspected") from exc
+
     for relative, body in sorted(files.items()):
         if (
             type(relative) is not str
@@ -72,14 +87,38 @@ def write_artifacts(run_dir: Path, files: Mapping[str, bytes]) -> None:
             or type(body) is not bytes
         ):
             raise HeresySecError("ARTIFACT_PATH_UNSAFE", "artifact path or body is unsafe")
-        target = (root / relative).resolve()
-        if root not in target.parents:
-            raise HeresySecError("ARTIFACT_PATH_UNSAFE", "artifact escapes run directory")
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.parent.is_symlink() or target.is_symlink():
-            raise HeresySecError("ARTIFACT_PATH_UNSAFE", "artifact path uses a symbolic link")
-        with target.open("xb") as handle:
-            handle.write(body)
+        unresolved = root / relative
+        try:
+            if unresolved.is_symlink() or any(
+                parent.is_symlink()
+                for parent in unresolved.parents
+                if parent != root and root in parent.parents
+            ):
+                raise HeresySecError(
+                    "ARTIFACT_PATH_UNSAFE",
+                    "artifact path uses a symbolic link",
+                )
+            target = unresolved.resolve()
+            if root not in target.parents:
+                raise HeresySecError("ARTIFACT_PATH_UNSAFE", "artifact escapes run directory")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.parent.is_symlink() or target.is_symlink():
+                raise HeresySecError(
+                    "ARTIFACT_PATH_UNSAFE",
+                    "artifact path uses a symbolic link",
+                )
+            with target.open("xb") as handle:
+                handle.write(body)
+        except FileExistsError as exc:
+            raise HeresySecError(
+                "ARTIFACT_OUTPUT_EXISTS",
+                f"artifact output already exists: {relative}",
+            ) from exc
+        except OSError as exc:
+            raise HeresySecError(
+                "ARTIFACT_WRITE_FAILED",
+                f"artifact could not be written: {relative}",
+            ) from exc
 
 
 def verify_manifest(run_dir: Path) -> dict[str, object]:

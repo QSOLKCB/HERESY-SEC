@@ -12,6 +12,7 @@ from .errors import HeresySecError
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,255}$")
 HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 OPERATION_RE = re.compile(r"^[a-z][a-z0-9._-]{0,63}$")
+SCHEME_RE = re.compile(r"^[a-z][a-z0-9+.-]{0,63}$")
 
 SERVICES = frozenset({"file", "network", "process", "ipc", "model", "tool", "system"})
 AUTHORITIES = frozenset(
@@ -250,7 +251,7 @@ def normalize_boundaries(value: Any) -> dict[str, Any]:
         if merged["allowed_network_hosts"]
         else []
     )
-    if any(item != item.lower() or not OPERATION_RE.fullmatch(item) for item in schemes):
+    if any(item != item.lower() or not SCHEME_RE.fullmatch(item) for item in schemes):
         raise HeresySecError(
             "CONTRACT_INVALID",
             "allowed network schemes must be lower-case scheme names",

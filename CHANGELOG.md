@@ -17,6 +17,14 @@ All notable changes to HERESY-SEC are documented here.
 - Added deterministic acceptance requirements for future graph, curvature, holonomy,
   shadow-guard, atom-policy, impossible-configuration and KR-MPGM work.
 
+### Fixed
+
+- Converted run-directory and artifact-write operating-system failures into stable,
+  machine-readable errors.
+- Rejected symbolic links at every archive-tree level before recursion.
+- Accepted lower-case RFC-style network schemes containing `+`, `.` or `-`.
+- Updated the MPL 2.0 Exhibit A link to Mozilla's current HTTPS URL.
+
 ## [0.1.0] - 2026-07-30
 
 ### Added

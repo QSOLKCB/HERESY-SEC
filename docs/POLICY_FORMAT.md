@@ -23,7 +23,7 @@ use `DENY`.
 | `max_parameter_bytes` | Canonical parameter JSON limit | `16384` |
 | `max_ipc_slots` | Exclusive upper IPC slot bound | `32` |
 | `network_enabled` | Whether network descriptions may pass | `false` |
-| `allowed_network_schemes` | Exact lower-case schemes | `["https"]` |
+| `allowed_network_schemes` | Exact lower-case RFC-style schemes | `["https"]` |
 | `allowed_network_hosts` | Exact lower-case hosts | `[]` |
 | `process_enabled` | Whether process descriptions may pass | `false` |
 | `allowed_processes` | Exact process targets | `[]` |
@@ -62,4 +62,3 @@ Rules cannot override:
 - missing or out-of-range IPC slots.
 
 Matched rule IDs remain in the decision trace even when a boundary forces denial.
-

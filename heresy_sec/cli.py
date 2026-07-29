@@ -147,6 +147,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             stream=sys.stderr,
         )
         return exc.exit_code
+    except OSError:
+        _emit(
+            {
+                "status": "ERROR",
+                "error_code": "IO_ERROR",
+                "message": "filesystem operation failed",
+            },
+            stream=sys.stderr,
+        )
+        return 2
     except KeyboardInterrupt:
         _emit(
             {
@@ -157,4 +167,3 @@ def main(argv: Sequence[str] | None = None) -> int:
             stream=sys.stderr,
         )
         return 130
-

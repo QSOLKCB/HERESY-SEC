@@ -7,7 +7,7 @@ from io import BytesIO
 from pathlib import Path
 
 from heresy_sec.archive import deterministic_zip_bytes, pack_run
-from heresy_sec.artifacts import safe_run_directory
+from heresy_sec.artifacts import safe_run_directory, write_artifacts
 from heresy_sec.canonical import canonical_bytes
 from heresy_sec.engine import (
     demo_documents,
@@ -146,6 +146,19 @@ class EngineTests(unittest.TestCase):
             packed = pack_run(run_dir)
             self.assertTrue(Path(packed["path"]).is_file())
 
+    def test_archive_rejects_symlinked_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "run"
+            outside = root / "outside"
+            run_dir.mkdir()
+            outside.mkdir()
+            (outside / "secret.txt").write_text("not archive evidence", encoding="utf-8")
+            (run_dir / "linked").symlink_to(outside, target_is_directory=True)
+            with self.assertRaises(HeresySecError) as raised:
+                deterministic_zip_bytes(run_dir)
+            self.assertEqual(raised.exception.code, "ARCHIVE_SYMLINK_FORBIDDEN")
+
     def test_unsafe_and_existing_output_paths_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -158,7 +171,25 @@ class EngineTests(unittest.TestCase):
                 safe_run_directory(root, "occupied")
             self.assertEqual((occupied / "user-file").read_text(encoding="utf-8"), "preserve")
 
+    def test_output_io_failures_are_controlled_and_preserve_existing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runs_file = root / "runs"
+            runs_file.write_text("preserve", encoding="utf-8")
+            with self.assertRaises(HeresySecError) as unsafe_root:
+                safe_run_directory(runs_file, "run")
+            self.assertEqual(unsafe_root.exception.code, "OUTPUT_PATH_UNSAFE")
+            self.assertEqual(runs_file.read_text(encoding="utf-8"), "preserve")
+
+            run_dir = root / "artifacts"
+            run_dir.mkdir()
+            blocker = run_dir / "nested"
+            blocker.write_text("preserve", encoding="utf-8")
+            with self.assertRaises(HeresySecError) as write_failure:
+                write_artifacts(run_dir, {"nested/artifact.json": b"{}\n"})
+            self.assertEqual(write_failure.exception.code, "ARTIFACT_OUTPUT_EXISTS")
+            self.assertEqual(blocker.read_text(encoding="utf-8"), "preserve")
+
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -48,6 +48,43 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("AUTHORITY_NOT_GRANTED", decision["reason_codes"])
         self.assertIn("allow-network-rule", decision["matched_rule_ids"])
 
+    def test_rfc_style_network_scheme_with_plus_is_supported(self) -> None:
+        action = copy.deepcopy(self.action)
+        action.update(
+            {
+                "action_id": "git-over-ssh",
+                "service": "network",
+                "operation": "connect",
+                "target": "git+ssh://code.example/repository",
+                "requested_authority": "NETWORK",
+            }
+        )
+        policy = copy.deepcopy(self.policy)
+        policy["boundaries"].update(
+            {
+                "allowed_authorities": ["NETWORK"],
+                "network_enabled": True,
+                "allowed_network_schemes": ["git+ssh"],
+                "allowed_network_hosts": ["code.example"],
+            }
+        )
+        policy["rules"] = [
+            {
+                "schema": "heresy-sec.rule/v1",
+                "rule_id": "allow-git-over-ssh",
+                "priority": 100,
+                "effect": "ALLOW",
+                "services": ["network"],
+                "operations": ["connect"],
+                "target_prefixes": ["git+ssh://code.example/"],
+                "agent_ids": ["demo-agent"],
+                "authorities": ["NETWORK"],
+            }
+        ]
+        decision = evaluate_action(action, policy)
+        self.assertEqual(decision["effect"], "ALLOW")
+        self.assertEqual(decision["selected_rule_id"], "allow-git-over-ssh")
+
     def test_file_traversal_fails_closed(self) -> None:
         action = copy.deepcopy(self.action)
         action["action_id"] = "path-traversal"
@@ -102,4 +139,3 @@ class PolicyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
