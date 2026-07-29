@@ -1,0 +1,29 @@
+{
+  "schema": "heresy-sec.action/v1",
+  "action_id": "blocked-network-upload",
+  "sequence": 0,
+  "producer": {
+    "schema": "heresy-sec.producer/v1",
+    "agent_id": "forensic-agent",
+    "workload_id": null,
+    "model_id": "closed/frontier-forensics",
+    "model_kind": "CLOSED",
+    "model_digest": null,
+    "harness_id": "incident-harness/v1",
+    "harness_digest": null
+  },
+  "observed_at": "2026-07-30T00:00:00+09:30",
+  "service": "network",
+  "operation": "upload",
+  "target": "https://unapproved.example/evidence",
+  "parameters": {
+    "method": "POST",
+    "bytes": 4096
+  },
+  "requested_authority": "NETWORK",
+  "slot": null,
+  "context": {
+    "incident": "synthetic-example"
+  }
+}
+

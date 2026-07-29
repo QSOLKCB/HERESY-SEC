@@ -1,0 +1,24 @@
+{
+  "schema": "heresy-sec.action/v1",
+  "action_id": "out-of-range-ipc-slot",
+  "sequence": 0,
+  "producer": {
+    "schema": "heresy-sec.producer/v1",
+    "agent_id": "coordination-agent",
+    "workload_id": null,
+    "model_id": null,
+    "model_kind": "NO_MODEL",
+    "model_digest": null,
+    "harness_id": "ipc-harness/v1",
+    "harness_digest": null
+  },
+  "observed_at": null,
+  "service": "ipc",
+  "operation": "allocate",
+  "target": "ipc/control",
+  "parameters": {},
+  "requested_authority": "SIM_ONLY",
+  "slot": 32,
+  "context": {}
+}
+

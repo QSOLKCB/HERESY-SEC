@@ -1,0 +1,26 @@
+{
+  "schema": "heresy-sec.action/v1",
+  "action_id": "file-integrity-read",
+  "sequence": 0,
+  "producer": {
+    "schema": "heresy-sec.producer/v1",
+    "agent_id": "integrity-agent",
+    "workload_id": "spiffe://example.invalid/agent/integrity",
+    "model_id": "local/mock-security-model",
+    "model_kind": "OPEN_WEIGHT",
+    "model_digest": null,
+    "harness_id": "example-harness/v1",
+    "harness_digest": null
+  },
+  "observed_at": null,
+  "service": "file",
+  "operation": "read",
+  "target": "workspace/config/application.json",
+  "parameters": {},
+  "requested_authority": "SIM_ONLY",
+  "slot": null,
+  "context": {
+    "purpose": "integrity inspection"
+  }
+}
+
