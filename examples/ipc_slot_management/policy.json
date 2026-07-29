@@ -1,0 +1,30 @@
+{
+  "schema": "heresy-sec.policy/v1",
+  "policy_id": "fixed-ipc-policy",
+  "default_effect": "DENY",
+  "boundaries": {
+    "allowed_authorities": ["SIM_ONLY"],
+    "max_parameter_bytes": 16384,
+    "max_ipc_slots": 32,
+    "network_enabled": false,
+    "allowed_network_schemes": ["https"],
+    "allowed_network_hosts": [],
+    "process_enabled": false,
+    "allowed_processes": [],
+    "file_target_prefixes": ["workspace/"]
+  },
+  "rules": [
+    {
+      "schema": "heresy-sec.rule/v1",
+      "rule_id": "allow-ipc-allocation",
+      "priority": 100,
+      "effect": "ALLOW",
+      "services": ["ipc"],
+      "operations": ["allocate"],
+      "target_prefixes": ["ipc/"],
+      "agent_ids": ["coordination-agent"],
+      "authorities": ["SIM_ONLY"]
+    }
+  ]
+}
+

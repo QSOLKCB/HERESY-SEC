@@ -1,0 +1,26 @@
+{
+  "schema": "heresy-sec.action/v1",
+  "action_id": "blocked-shell-launch",
+  "sequence": 0,
+  "producer": {
+    "schema": "heresy-sec.producer/v1",
+    "agent_id": "tool-agent",
+    "workload_id": null,
+    "model_id": "local/tool-model",
+    "model_kind": "OPEN_WEIGHT",
+    "model_digest": null,
+    "harness_id": "tool-harness/v1",
+    "harness_digest": null
+  },
+  "observed_at": null,
+  "service": "process",
+  "operation": "spawn",
+  "target": "/bin/sh",
+  "parameters": {
+    "argv": ["/bin/sh", "-c", "echo synthetic"]
+  },
+  "requested_authority": "CONTROLLED_EXECUTION",
+  "slot": null,
+  "context": {}
+}
+
