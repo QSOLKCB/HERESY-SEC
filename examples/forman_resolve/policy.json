@@ -1,0 +1,47 @@
+{
+  "schema": "heresy-sec.policy/v2",
+  "policy_id": "forman-resolve-example",
+  "default_effect": "DENY",
+  "boundaries": {
+    "allowed_authorities": ["SIM_ONLY"],
+    "max_parameter_bytes": 16384,
+    "max_ipc_slots": 32,
+    "network_enabled": false,
+    "allowed_network_schemes": ["https"],
+    "allowed_network_hosts": [],
+    "process_enabled": false,
+    "allowed_processes": [],
+    "file_target_prefixes": ["workspace/"]
+  },
+  "rules": [
+    {
+      "schema": "heresy-sec.rule/v1",
+      "rule_id": "allow-example-reads",
+      "priority": 100,
+      "effect": "ALLOW",
+      "services": ["file"],
+      "operations": ["read"],
+      "target_prefixes": ["workspace/"],
+      "agent_ids": ["forman-example-agent"],
+      "authorities": ["SIM_ONLY"]
+    }
+  ],
+  "geometry": {
+    "module": "heresy-geom",
+    "version": "2",
+    "fixture_set": "heresy-geom-conformance/v2",
+    "window": {"short": 2, "long": 4, "stride": 2},
+    "quantize": {"scale": 16, "mode": "FLOOR"},
+    "forman": {
+      "mode": "unweighted",
+      "weight_map": {},
+      "max_abs": 8,
+      "max_window_l1": 64,
+      "learning": "forbidden"
+    },
+    "max_spectral_l2_delta": 4096,
+    "epsilon_P": 1,
+    "forbid_cycles": [],
+    "require_delta_P": true
+  }
+}
