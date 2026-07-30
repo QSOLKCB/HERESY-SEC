@@ -592,11 +592,6 @@ def build_registry(
                 )
                 obstructions[item["obstruction_sha256"]] = item
 
-    actor_edges: dict[str, list[dict[str, Any]]] = {}
-    graph_edges_by_action = {
-        edge["action_id"]: edge
-        for edge in graph["edges"]
-    }
     actor_edges: dict[tuple[str, str | None], list[dict[str, Any]]] = {}
     graph_edges_by_action = {
         edge["action_id"]: edge
@@ -604,8 +599,12 @@ def build_registry(
     }
     for action in actions:
         edge = graph_edges_by_action[action["action_id"]]
-        actor_key = (action["producer"]["agent_id"], action["producer"]["workload_id"])
+        actor_key = (
+            action["producer"]["agent_id"],
+            action["producer"]["workload_id"],
+        )
         actor_edges.setdefault(actor_key, []).append(edge)
+    required_masks = {
         AUTHORITY_MASKS["READ_ONLY_EXTERNAL"],
         AUTHORITY_MASKS["WORKSPACE_WRITE"],
         AUTHORITY_MASKS["NETWORK"],

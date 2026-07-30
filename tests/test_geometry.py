@@ -503,6 +503,88 @@ class GeometryEngineTests(unittest.TestCase):
             self.assertEqual(obstruction["residual"], expected["expected_residual"])
             self.assertEqual(replay_run(run_dir)["status"], "PASS")
 
+    def test_trident_aggregation_keeps_workloads_separate(self) -> None:
+        policy = allow_authorities(
+            geometry_policy(),
+            ["READ_ONLY_EXTERNAL", "WORKSPACE_WRITE", "NETWORK"],
+        )
+        policy["boundaries"].update(
+            {
+                "network_enabled": True,
+                "allowed_network_hosts": ["approved.example"],
+                "allowed_network_schemes": ["https"],
+            }
+        )
+        policy["rules"] = self._allow_rules(
+            [("file", "read"), ("file", "write"), ("network", "upload")]
+        )
+        action_specs = (
+            (
+                "read",
+                "reader-workload",
+                "file",
+                "read",
+                "workspace/source.txt",
+                "READ_ONLY_EXTERNAL",
+            ),
+            (
+                "write",
+                "writer-workload",
+                "file",
+                "write",
+                "workspace/result.txt",
+                "WORKSPACE_WRITE",
+            ),
+            (
+                "upload",
+                "sender-workload",
+                "network",
+                "upload",
+                "https://approved.example/result",
+                "NETWORK",
+            ),
+        )
+        actions = []
+        for sequence, (
+            action_id,
+            workload_id,
+            service,
+            operation,
+            target,
+            authority,
+        ) in enumerate(action_specs):
+            action = action_variant(
+                self.action,
+                action_id=action_id,
+                sequence=sequence,
+                service=service,
+                operation=operation,
+                target=target,
+                authority=authority,
+            )
+            action["producer"]["workload_id"] = workload_id
+            actions.append(action)
+
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir, _ = self._run(
+                Path(directory),
+                "separate-workloads",
+                actions,
+                policy,
+            )
+            registry = parse_json_bytes(
+                (
+                    run_dir
+                    / "geometry/000000/impossible-configurations.json"
+                ).read_bytes()
+            )
+            obstruction_types = {
+                item["obstruction_type"]
+                for item in registry["obstructions"]
+            }
+            self.assertNotIn("TRIDENT_TAINT_FORK", obstruction_types)
+            self.assertEqual(replay_run(run_dir)["status"], "PASS")
+
     def test_forbidden_cycle_pattern_discharges(self) -> None:
         policy = geometry_policy()
         policy["geometry"]["forbid_cycles"] = [["file.read", "file.write"]]
