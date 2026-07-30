@@ -18,6 +18,7 @@ from .geometry_profile_v2_policy import (
 _ORIGINAL_BUILD_SPECTRAL = _geometry.build_spectral
 _ORIGINAL_BUILD_HOLONOMY = _geometry.build_holonomy
 _ORIGINAL_BUILD_REGISTRY = _geometry.build_registry
+_REGISTRY_BUNDLE_DOMAIN = "HERESY-GEOM/IMPOSSIBLE-CONFIGURATIONS-BUNDLE/v2"
 
 
 def _role_spectral(
@@ -265,4 +266,4 @@ def _aggregate_registry(
         "obstruction_count": len(rows),
         "effect": effect,
     }
-    return _self_hashed(_V2_DOMAINS["registry"], core, "registry_sha256")
+    return _self_hashed(_REGISTRY_BUNDLE_DOMAIN, core, "registry_sha256")
