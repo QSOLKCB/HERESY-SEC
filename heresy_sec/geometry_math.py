@@ -9,6 +9,10 @@ from .errors import HeresySecError
 
 
 Polynomial = tuple[Fraction, ...]
+MAX_SPECTRAL_MATRIX_ORDER = 64
+MAX_SPECTRAL_SCALE = 64
+MAX_SPECTRAL_UPPER_BOUND = 64
+MAX_SPECTRAL_ISOLATION_POINTS = 1_024
 
 
 def _trim(polynomial: Iterable[Fraction]) -> Polynomial:
@@ -127,29 +131,67 @@ def _quantized_factor_roots(
     multiplicity: int,
     scale: int,
     upper_bound: int,
+    isolation_points: list[int],
 ) -> list[int]:
     sequence = _sturm_sequence(factor)
-    output: list[int] = []
     maximum = upper_bound * scale
-    distinct_count = 0
-    for quantized in range(maximum + 1):
-        left = Fraction(quantized, scale)
-        if _evaluate(factor, left) == 0:
-            output.extend([quantized] * multiplicity)
-            distinct_count += 1
-        if quantized == maximum:
-            continue
-        right = Fraction(quantized + 1, scale)
-        interior = _variations(sequence, left) - _variations(sequence, right)
-        if _evaluate(factor, right) == 0:
-            interior -= 1
-        if interior < 0:
+    states: dict[int, tuple[bool, int]] = {}
+
+    def state(quantized: int) -> tuple[bool, int]:
+        if quantized not in states:
+            isolation_points[0] += 1
+            if isolation_points[0] > MAX_SPECTRAL_ISOLATION_POINTS:
+                raise HeresySecError(
+                    "GEOMETRY_SPECTRAL_WORK_LIMIT",
+                    "spectral root isolation exceeded its deterministic work bound",
+                )
+            point = Fraction(quantized, scale)
+            states[quantized] = (
+                _evaluate(factor, point) == 0,
+                _variations(sequence, point),
+            )
+        return states[quantized]
+
+    def half_open_count(left: int, right: int) -> int:
+        left_is_root, left_variations = state(left)
+        right_is_root, right_variations = state(right)
+        count = (
+            int(left_is_root)
+            + left_variations
+            - right_variations
+            - int(right_is_root)
+        )
+        if count < 0:
             raise HeresySecError(
                 "GEOMETRY_SPECTRUM_INVALID",
                 "spectral root isolation produced an invalid count",
             )
-        output.extend([quantized] * (interior * multiplicity))
-        distinct_count += interior
+        return count
+
+    output: list[int] = []
+
+    def isolate(left: int, right: int, count: int) -> None:
+        if count == 0:
+            return
+        if right - left == 1:
+            output.extend([left] * (count * multiplicity))
+            return
+        middle = (left + right) // 2
+        left_count = half_open_count(left, middle)
+        if left_count > count:
+            raise HeresySecError(
+                "GEOMETRY_SPECTRUM_INVALID",
+                "spectral root isolation produced an invalid partition",
+            )
+        isolate(left, middle, left_count)
+        isolate(middle, right, count - left_count)
+
+    below_maximum = half_open_count(0, maximum)
+    isolate(0, maximum, below_maximum)
+    maximum_is_root, _ = state(maximum)
+    if maximum_is_root:
+        output.extend([maximum] * multiplicity)
+    distinct_count = below_maximum + int(maximum_is_root)
     if distinct_count != _degree(factor):
         raise HeresySecError(
             "GEOMETRY_SPECTRUM_INVALID",
@@ -179,10 +221,15 @@ def characteristic_polynomial(matrix: list[list[int]]) -> list[int]:
     """Return monic characteristic-polynomial coefficients in descending order."""
 
     size = len(matrix)
-    if size == 0 or any(len(row) != size for row in matrix):
+    if (
+        size == 0
+        or size > MAX_SPECTRAL_MATRIX_ORDER
+        or any(len(row) != size for row in matrix)
+    ):
         raise HeresySecError(
             "GEOMETRY_SPECTRUM_INVALID",
-            "spectral matrix must be a non-empty square integer matrix",
+            "spectral matrix must be square with order in "
+            f"1..{MAX_SPECTRAL_MATRIX_ORDER}",
         )
     if any(type(value) is not int for row in matrix for value in row):
         raise HeresySecError(
@@ -215,9 +262,24 @@ def quantized_real_spectrum(
 ) -> tuple[list[int], list[int]]:
     """Return exact characteristic coefficients and floor-quantized real roots."""
 
+    if type(scale) is not int or not 1 <= scale <= MAX_SPECTRAL_SCALE:
+        raise HeresySecError(
+            "GEOMETRY_SPECTRUM_INVALID",
+            f"spectral scale must be an exact integer in 1..{MAX_SPECTRAL_SCALE}",
+        )
+    if (
+        type(upper_bound) is not int
+        or not 1 <= upper_bound <= MAX_SPECTRAL_UPPER_BOUND
+    ):
+        raise HeresySecError(
+            "GEOMETRY_SPECTRUM_INVALID",
+            "spectral upper bound must be an exact integer in "
+            f"1..{MAX_SPECTRAL_UPPER_BOUND}",
+        )
     coefficients = characteristic_polynomial(matrix)
     polynomial = tuple(Fraction(value) for value in reversed(coefficients))
     roots: list[int] = []
+    isolation_points = [0]
     for factor, multiplicity in _square_free_factors(polynomial):
         roots.extend(
             _quantized_factor_roots(
@@ -225,6 +287,7 @@ def quantized_real_spectrum(
                 multiplicity=multiplicity,
                 scale=scale,
                 upper_bound=upper_bound,
+                isolation_points=isolation_points,
             )
         )
     roots.sort()

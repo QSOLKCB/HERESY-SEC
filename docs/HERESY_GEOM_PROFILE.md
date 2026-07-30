@@ -98,7 +98,13 @@ ignored in this projection.
 The runtime computes the monic characteristic polynomial over exact integers using
 Faddeev–LeVerrier, square-free factors it over exact rational numbers, builds Sturm
 sequences and isolates every real root. Laplacian roots are bounded by twice the
-maximum degree. Each eigenvalue is stored as:
+maximum degree. Root isolation recursively subdivides only quantization intervals with
+nonzero Sturm root counts; it does not linearly scan every quantization point. Profile
+v1 accepts matrix order at most 64, scale at most 64 and spectral upper bound at most
+64, and caps isolation at 1,024 distinct factor/grid-point evaluations per window.
+Exceeding the cap is a controlled `GEOMETRY_SPECTRAL_WORK_LIMIT` failure.
+
+Each eigenvalue is stored as:
 
 ```text
 floor(eigenvalue * quantize.scale)

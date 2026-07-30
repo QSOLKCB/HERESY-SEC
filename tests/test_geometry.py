@@ -5,7 +5,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from heresy_sec import geometry_math
 from heresy_sec.artifacts import build_manifest
 from heresy_sec.canonical import (
     DOMAINS,
@@ -133,6 +135,44 @@ class GeometryMathTests(unittest.TestCase):
                 )
                 self.assertEqual(coefficients, row["characteristic_coefficients"])
                 self.assertEqual(spectrum, row["expected_quantized_eigenvalues"])
+
+    def test_spectral_isolation_does_not_scan_the_full_grid(self) -> None:
+        matrix = [
+            [1, -1, 0, 0],
+            [-1, 2, -1, 0],
+            [0, -1, 2, -1],
+            [0, 0, -1, 1],
+        ]
+        evaluate = geometry_math._evaluate
+        with mock.patch.object(
+            geometry_math,
+            "_evaluate",
+            wraps=evaluate,
+        ) as monitored:
+            _, spectrum = quantized_real_spectrum(
+                matrix,
+                scale=64,
+                upper_bound=64,
+            )
+        self.assertEqual(spectrum, [0, 37, 128, 218])
+        self.assertLess(monitored.call_count, 1_000)
+
+    def test_spectral_isolation_work_limit_fails_closed(self) -> None:
+        with mock.patch.object(
+            geometry_math,
+            "MAX_SPECTRAL_ISOLATION_POINTS",
+            1,
+        ):
+            with self.assertRaises(HeresySecError) as raised:
+                quantized_real_spectrum(
+                    [[1, -1], [-1, 1]],
+                    scale=64,
+                    upper_bound=64,
+                )
+        self.assertEqual(
+            raised.exception.code,
+            "GEOMETRY_SPECTRAL_WORK_LIMIT",
+        )
 
     def test_t5_shadow_guard_cannot_silently_rearm(self) -> None:
         self.assertFalse(
@@ -358,6 +398,107 @@ class GeometryEngineTests(unittest.TestCase):
             self.assertEqual(rearmed_decision["effect"], "ALLOW")
             self.assertTrue(rearmed_decision["shadow_guard_armed"])
             self.assertTrue(rearmed_decision["load_bearing_allow"])
+
+    def test_shadow_guard_review_cannot_revalidate_rearm(self) -> None:
+        policy = allow_authorities(
+            geometry_policy(),
+            ["READ_ONLY_EXTERNAL", "SIM_ONLY", "WORKSPACE_WRITE"],
+        )
+        policy["geometry"]["window"] = 2
+        policy["rules"] = self._allow_rules(
+            [("file", "read"), ("file", "write"), ("system", "rearm")]
+        )
+        policy["rules"].append(
+            {
+                "schema": "heresy-sec.rule/v1",
+                "rule_id": "review-revalidation-read",
+                "priority": 200,
+                "effect": "REVIEW",
+                "services": ["file"],
+                "operations": ["read"],
+                "target_prefixes": ["workspace/review.txt"],
+                "agent_ids": ["demo-agent"],
+                "authorities": ["SIM_ONLY"],
+            }
+        )
+        actions = [
+            action_variant(
+                self.action,
+                action_id="trip-read",
+                sequence=0,
+                service="file",
+                operation="read",
+                target="workspace/evidence.txt",
+                authority="READ_ONLY_EXTERNAL",
+            ),
+            action_variant(
+                self.action,
+                action_id="trip-write",
+                sequence=1,
+                service="file",
+                operation="write",
+                target="workspace/evidence.txt",
+                authority="WORKSPACE_WRITE",
+            ),
+            action_variant(
+                self.action,
+                action_id="attempted-rearm",
+                sequence=2,
+                service="system",
+                operation="rearm",
+                target="shadow-guard",
+                authority="SIM_ONLY",
+            ),
+            action_variant(
+                self.action,
+                action_id="reviewed-read",
+                sequence=3,
+                service="file",
+                operation="read",
+                target="workspace/review.txt",
+                authority="SIM_ONLY",
+            ),
+            action_variant(
+                self.action,
+                action_id="safe-read-one",
+                sequence=4,
+                service="file",
+                operation="read",
+                target="workspace/safe.txt",
+                authority="SIM_ONLY",
+            ),
+            action_variant(
+                self.action,
+                action_id="safe-read-two",
+                sequence=5,
+                service="file",
+                operation="read",
+                target="workspace/safe.txt",
+                authority="SIM_ONLY",
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir, _ = self._run(
+                Path(directory),
+                "reviewed-rearm",
+                actions,
+                policy,
+            )
+            reviewed = parse_json_bytes(
+                (run_dir / "geometry/000001/decision.json").read_bytes()
+            )
+            following = parse_json_bytes(
+                (run_dir / "geometry/000002/decision.json").read_bytes()
+            )
+            self.assertEqual(reviewed["classical_effect"], "REVIEW")
+            self.assertEqual(reviewed["effect"], "REVIEW")
+            self.assertFalse(reviewed["shadow_guard_armed"])
+            self.assertEqual(following["classical_effect"], "ALLOW")
+            self.assertEqual(following["geometry_effect"], "ALLOW")
+            self.assertEqual(following["effect"], "DENY")
+            self.assertFalse(following["shadow_guard_armed"])
+            self.assertEqual(replay_run(run_dir)["status"], "PASS")
 
     def test_t6_missing_evidence_atom_rejects_after_manifest_rebuild(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

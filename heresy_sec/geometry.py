@@ -938,7 +938,10 @@ def build_geometry_window(
         armed=previously_armed,
         trip=trip,
         rearm_receipt_present=rearm_present,
-        revalidation_ok=geometry_effect == "ALLOW" and classical_effect != "DENY",
+        revalidation_ok=(
+            geometry_effect == "ALLOW"
+            and classical_effect == "ALLOW"
+        ),
     )
     if not armed and preliminary_effect == "ALLOW":
         final_effect = "DENY"
