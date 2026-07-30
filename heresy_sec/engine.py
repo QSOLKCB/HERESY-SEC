@@ -5,7 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .artifacts import README_ORIGIN, build_manifest, safe_run_directory, verify_manifest, write_artifacts
+from .artifacts import (
+    README_ORIGIN_V1,
+    README_ORIGIN_V2,
+    build_manifest,
+    safe_run_directory,
+    verify_manifest,
+    write_artifacts,
+)
 from .canonical import DOMAINS, canonical_bytes, domain_hash, parse_json_bytes, sha256_bytes
 from .contracts import (
     action_identity,
@@ -17,11 +24,21 @@ from .contracts import (
     policy_identity,
 )
 from .errors import HeresySecError
+from .geometry import (
+    PROFILE,
+    build_geometry_windows,
+    geometry_artifact_map,
+    geometry_effect_counts,
+)
 from .implementation import build_implementation_identity, normalize_implementation
 from .policy import evaluate_action
 
 
 ZERO_HASH = "0" * 64
+
+
+def _origin_bytes(policy: dict[str, Any]) -> bytes:
+    return README_ORIGIN_V2 if policy["schema"] == "heresy-sec.policy/v2" else README_ORIGIN_V1
 
 
 def _read_bytes(path: Path, label: str) -> bytes:
@@ -129,18 +146,20 @@ def _summary(
     decisions: list[dict[str, Any]],
     receipts: list[dict[str, Any]],
     implementation: dict[str, Any],
+    geometry_windows: list[dict[str, Any]],
 ) -> dict[str, Any]:
     counts = {
         effect: sum(1 for decision in decisions if decision["effect"] == effect)
         for effect in ("ALLOW", "DENY", "REVIEW")
     }
-    if counts["DENY"]:
+    geometry_counts = geometry_effect_counts(geometry_windows)
+    if counts["DENY"] or geometry_counts["DENY"]:
         final_state = "DENIED"
-    elif counts["REVIEW"]:
+    elif counts["REVIEW"] or geometry_counts["REVIEW"]:
         final_state = "REVIEW_REQUIRED"
     else:
         final_state = "ALLOWED"
-    return {
+    summary = {
         "schema": "heresy-sec.summary/v1",
         "run_id": run_id,
         "final_state": final_state,
@@ -152,6 +171,19 @@ def _summary(
         "head_receipt_sha256": receipts[-1]["receipt_sha256"],
         "actions_executed": False,
     }
+    if policy["schema"] == "heresy-sec.policy/v2":
+        summary.update(
+            {
+                "schema": "heresy-sec.summary/v2",
+                "geometry_profile": PROFILE,
+                "geometry_window_count": len(geometry_windows),
+                "geometry_effect_counts": geometry_counts,
+                "head_geometry_receipt_sha256": geometry_windows[-1]["receipt"][
+                    "geometry_receipt_sha256"
+                ],
+            }
+        )
+    return summary
 
 
 def _artifact_map(
@@ -164,9 +196,10 @@ def _artifact_map(
     receipts: list[dict[str, Any]],
     implementation: dict[str, Any],
     summary: dict[str, Any],
+    geometry_windows: list[dict[str, Any]],
 ) -> dict[str, bytes]:
     files: dict[str, bytes] = {
-        "README_ORIGIN.txt": README_ORIGIN,
+        "README_ORIGIN.txt": _origin_bytes(policy),
         "policy.raw": raw_policy,
         "policy.json": canonical_bytes(policy),
         "implementation.json": canonical_bytes(implementation),
@@ -181,6 +214,7 @@ def _artifact_map(
         files[f"actions/{stem}.json"] = canonical_bytes(action)
         files[f"decisions/{stem}.json"] = canonical_bytes(decision)
         files[f"receipts/{stem}.json"] = canonical_bytes(receipt)
+    files.update(geometry_artifact_map(geometry_windows))
     return dict(sorted(files.items()))
 
 
@@ -202,6 +236,14 @@ def run_actions(
         implementation=implementation,
     )
     decisions, receipts = _build_records(raw_actions, actions, policy)
+    geometry_windows = build_geometry_windows(
+        raw_actions=raw_actions,
+        actions=actions,
+        decisions=decisions,
+        receipts=receipts,
+        policy=policy,
+        zero_hash=ZERO_HASH,
+    )
     summary = _summary(
         run_id=run_id,
         raw_policy=raw_policy,
@@ -209,6 +251,7 @@ def run_actions(
         decisions=decisions,
         receipts=receipts,
         implementation=implementation,
+        geometry_windows=geometry_windows,
     )
     files = _artifact_map(
         raw_policy=raw_policy,
@@ -219,6 +262,7 @@ def run_actions(
         receipts=receipts,
         implementation=implementation,
         summary=summary,
+        geometry_windows=geometry_windows,
     )
     files["manifest.json"] = build_manifest(files, run_id)
     target = safe_run_directory(runs_dir, run_name or f"run-{run_id[:16]}")
@@ -276,6 +320,7 @@ def _semantic_records(
     list[dict[str, Any]],
     dict[str, Any],
     dict[str, Any],
+    list[dict[str, Any]],
 ]:
     summary = _read_run_json(root, "summary.json")
     if type(summary) is not dict or type(summary.get("action_count")) is not int:
@@ -299,7 +344,7 @@ def _semantic_records(
             "IMPLEMENTATION_CANONICAL_MISMATCH",
             "implementation record is not canonical",
         )
-    if _read_bytes(root / "README_ORIGIN.txt", "run origin") != README_ORIGIN:
+    if _read_bytes(root / "README_ORIGIN.txt", "run origin") != _origin_bytes(policy):
         raise HeresySecError(
             "RUN_ORIGIN_MISMATCH",
             "run origin notice differs from the implementation",
@@ -354,6 +399,50 @@ def _semantic_records(
     expected_log = b"".join(canonical_bytes(item) + b"\n" for item in receipts)
     if _read_bytes(root / "event-log.jsonl", "event log") != expected_log:
         raise HeresySecError("EVENT_LOG_MISMATCH", "event log differs from receipt chain")
+    geometry_windows = build_geometry_windows(
+        raw_actions=raw_actions,
+        actions=actions,
+        decisions=decisions,
+        receipts=receipts,
+        policy=policy,
+        zero_hash=ZERO_HASH,
+    )
+    expected_geometry = geometry_artifact_map(geometry_windows)
+    for relative, body in expected_geometry.items():
+        if _read_bytes(root / relative, relative) != body:
+            raise HeresySecError(
+                "GEOMETRY_ARTIFACT_MISMATCH",
+                f"geometry artifact differs from deterministic reconstruction: {relative}",
+            )
+    expected_paths = {
+        "README_ORIGIN.txt",
+        "policy.raw",
+        "policy.json",
+        "implementation.json",
+        "summary.json",
+        "event-log.jsonl",
+        *expected_geometry,
+    }
+    for index in range(count):
+        stem = f"{index:06d}"
+        expected_paths.update(
+            {
+                f"captures/{stem}.raw",
+                f"actions/{stem}.json",
+                f"decisions/{stem}.json",
+                f"receipts/{stem}.json",
+            }
+        )
+    actual_paths = {
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
+    if actual_paths != expected_paths | {"manifest.json"}:
+        raise HeresySecError(
+            "RUN_ARTIFACT_SET_MISMATCH",
+            "run contains artifacts outside its versioned semantic contract",
+        )
     return (
         raw_policy,
         policy,
@@ -363,6 +452,7 @@ def _semantic_records(
         receipts,
         implementation,
         summary,
+        geometry_windows,
     )
 
 
@@ -378,6 +468,7 @@ def verify_run_directory(run_dir: Path) -> dict[str, Any]:
         receipts,
         implementation,
         summary,
+        geometry_windows,
     ) = _semantic_records(root)
     run_id = _run_id(
         raw_policy=raw_policy,
@@ -393,17 +484,29 @@ def verify_run_directory(run_dir: Path) -> dict[str, Any]:
         decisions=decisions,
         receipts=receipts,
         implementation=implementation,
+        geometry_windows=geometry_windows,
     )
     if summary != expected_summary or (root / "summary.json").read_bytes() != canonical_bytes(expected_summary):
         raise HeresySecError("SUMMARY_MISMATCH", "summary does not match run artifacts")
     if manifest_report["run_id"] != run_id:
         raise HeresySecError("MANIFEST_RUN_MISMATCH", "manifest does not bind the computed run")
-    return {
+    report = {
         **manifest_report,
         "final_state": summary["final_state"],
         "action_count": summary["action_count"],
         "head_receipt_sha256": summary["head_receipt_sha256"],
     }
+    if summary["schema"] == "heresy-sec.summary/v2":
+        report.update(
+            {
+                "geometry_profile": summary["geometry_profile"],
+                "geometry_window_count": summary["geometry_window_count"],
+                "head_geometry_receipt_sha256": summary[
+                    "head_geometry_receipt_sha256"
+                ],
+            }
+        )
+    return report
 
 
 def replay_run(run_dir: Path) -> dict[str, Any]:
@@ -418,6 +521,7 @@ def replay_run(run_dir: Path) -> dict[str, Any]:
         stored_receipts,
         stored_implementation,
         stored_summary,
+        stored_geometry_windows,
     ) = _semantic_records(root)
     current_implementation = build_implementation_identity()
     if (
@@ -429,6 +533,14 @@ def replay_run(run_dir: Path) -> dict[str, Any]:
             "exact replay requires the source bundle that created the run",
         )
     replayed_decisions, replayed_receipts = _build_records(raw_actions, actions, policy)
+    replayed_geometry_windows = build_geometry_windows(
+        raw_actions=raw_actions,
+        actions=actions,
+        decisions=replayed_decisions,
+        receipts=replayed_receipts,
+        policy=policy,
+        zero_hash=ZERO_HASH,
+    )
     run_id = _run_id(
         raw_policy=raw_policy,
         policy=policy,
@@ -443,22 +555,36 @@ def replay_run(run_dir: Path) -> dict[str, Any]:
         decisions=replayed_decisions,
         receipts=replayed_receipts,
         implementation=current_implementation,
+        geometry_windows=replayed_geometry_windows,
     )
     if (
         [canonical_bytes(item) for item in replayed_decisions]
         != [canonical_bytes(item) for item in stored_decisions]
         or [canonical_bytes(item) for item in replayed_receipts]
         != [canonical_bytes(item) for item in stored_receipts]
+        or geometry_artifact_map(replayed_geometry_windows)
+        != geometry_artifact_map(stored_geometry_windows)
         or canonical_bytes(replayed_summary) != canonical_bytes(stored_summary)
     ):
         raise HeresySecError("REPLAY_DIVERGENCE", "deterministic replay diverged from stored artifacts")
-    return {
+    report = {
         "status": "PASS",
         "run_id": run_id,
         "action_count": len(actions),
         "final_state": stored_summary["final_state"],
         "implementation_sha256": current_implementation["source_bundle_sha256"],
     }
+    if stored_summary["schema"] == "heresy-sec.summary/v2":
+        report.update(
+            {
+                "geometry_profile": stored_summary["geometry_profile"],
+                "geometry_window_count": stored_summary["geometry_window_count"],
+                "head_geometry_receipt_sha256": stored_summary[
+                    "head_geometry_receipt_sha256"
+                ],
+            }
+        )
+    return report
 
 
 def inspect_run(run_dir: Path) -> dict[str, Any]:
@@ -482,14 +608,34 @@ def inspect_run(run_dir: Path) -> dict[str, Any]:
                 "decision_sha256": decision["decision_sha256"],
             }
         )
-    return {"summary": summary, "decisions": decisions}
+    geometry = []
+    for index in range(summary.get("geometry_window_count", 0)):
+        decision = _read_run_json(root, f"geometry/{index:06d}/decision.json")
+        registry = _read_run_json(
+            root,
+            f"geometry/{index:06d}/impossible-configurations.json",
+        )
+        geometry.append(
+            {
+                "window_index": index,
+                "effect": decision["effect"],
+                "shadow_guard_armed": decision["shadow_guard_armed"],
+                "load_bearing_allow": decision["load_bearing_allow"],
+                "reason_codes": decision["reason_codes"],
+                "obstruction_types": sorted(
+                    item["obstruction_type"] for item in registry["obstructions"]
+                ),
+                "geometry_decision_sha256": decision["geometry_decision_sha256"],
+            }
+        )
+    return {"summary": summary, "decisions": decisions, "geometry": geometry}
 
 
 def validate_files(action_path: Path, policy_path: Path) -> dict[str, Any]:
     raw_action, action = load_action(action_path)
     raw_policy, policy = load_policy(policy_path)
     decision = evaluate_action(action, policy)
-    return {
+    report = {
         "status": "PASS",
         "action_sha256": action_identity(action),
         "capture_sha256": sha256_bytes(raw_action),
@@ -498,6 +644,10 @@ def validate_files(action_path: Path, policy_path: Path) -> dict[str, Any]:
         "prospective_effect": decision["effect"],
         "reason_codes": decision["reason_codes"],
     }
+    if policy["schema"] == "heresy-sec.policy/v2":
+        report["geometry_profile"] = PROFILE
+        report["geometry_note"] = "prospective geometry requires an ordered run window"
+    return report
 
 
 def demo_documents() -> tuple[dict[str, Any], dict[str, Any]]:

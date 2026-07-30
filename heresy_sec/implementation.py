@@ -20,6 +20,8 @@ IMPLEMENTATION_MODULES = (
     "contracts.py",
     "engine.py",
     "errors.py",
+    "geometry.py",
+    "geometry_math.py",
     "implementation.py",
     "policy.py",
     "selftest.py",
@@ -95,4 +97,3 @@ def normalize_implementation(value: Any) -> dict[str, Any]:
     if value["source_bundle_sha256"] != expected:
         raise HeresySecError("IMPLEMENTATION_HASH_MISMATCH", "implementation self-hash is invalid")
     return {**core, "source_bundle_sha256": expected}
-

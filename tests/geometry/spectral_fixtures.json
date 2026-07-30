@@ -1,0 +1,1 @@
+{"fixtures":[{"characteristic_coefficients":[1,-4,3,0],"expected_quantized_eigenvalues":[0,16,48],"name":"path_3"},{"characteristic_coefficients":[1,-8,20,-16,0],"expected_quantized_eigenvalues":[0,32,32,64],"name":"cycle_4"}],"quantize":{"mode":"FLOOR","scale":16},"schema":"heresy-geom.spectral-fixtures/v1"}

@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use HERESY-SEC, please cite this software."
-title: "HERESY-SEC v0.1.0: Deterministic Security Receipts and Exact Replay for AI-Agent Actions"
+title: "HERESY-SEC v0.2.0: Deterministic Policy, Geometric Evidence and Exact Replay for AI-Agent Actions"
 type: software
-version: 0.1.0
+version: 0.2.0
 date-released: 2026-07-30
 authors:
   - family-names: Slade
@@ -14,6 +14,8 @@ keywords:
   - deterministic security
   - AI agents
   - exact replay
+  - discrete geometry
+  - graph holonomy
   - canonical JSON
   - incident forensics
   - policy receipts

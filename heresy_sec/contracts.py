@@ -7,6 +7,7 @@ from typing import Any, Iterable
 
 from .canonical import DOMAINS, canonical_clone, domain_hash, without_self_hash
 from .errors import HeresySecError
+from .geometry import normalize_geometry_policy
 
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,255}$")
@@ -339,31 +340,47 @@ def normalize_rule(value: Any) -> dict[str, Any]:
 
 def normalize_policy(value: Any) -> dict[str, Any]:
     policy = _mapping(value, "policy")
+    schema = policy.get("schema")
+    if schema not in {"heresy-sec.policy/v1", "heresy-sec.policy/v2"}:
+        raise HeresySecError(
+            "SCHEMA_UNSUPPORTED",
+            "policy schema must be heresy-sec.policy/v1 or heresy-sec.policy/v2",
+        )
+    required_fields = ("schema", "policy_id", "default_effect", "rules")
+    if schema == "heresy-sec.policy/v2":
+        required_fields += ("geometry",)
     _keys(
         policy,
-        required=("schema", "policy_id", "default_effect", "rules"),
+        required=required_fields,
         optional=("boundaries",),
         label="policy",
     )
-    if policy["schema"] != "heresy-sec.policy/v1":
-        raise HeresySecError("SCHEMA_UNSUPPORTED", "policy schema must be heresy-sec.policy/v1")
     if type(policy["rules"]) is not list or len(policy["rules"]) > 4096:
         raise HeresySecError("CONTRACT_INVALID", "policy.rules must be a list with at most 4096 items")
     rules = [normalize_rule(item) for item in policy["rules"]]
     rule_ids = [item["rule_id"] for item in rules]
     if len(set(rule_ids)) != len(rule_ids):
         raise HeresySecError("CONTRACT_INVALID", "policy rule_id values must be unique")
-    return {
-        "schema": "heresy-sec.policy/v1",
+    normalized = {
+        "schema": schema,
         "policy_id": _identifier(policy["policy_id"], "policy.policy_id"),
         "default_effect": _choice(policy["default_effect"], "policy.default_effect", EFFECTS),
         "boundaries": normalize_boundaries(policy.get("boundaries", {})),
         "rules": sorted(rules, key=lambda item: item["rule_id"]),
     }
+    if schema == "heresy-sec.policy/v2":
+        normalized["geometry"] = normalize_geometry_policy(policy["geometry"])
+    return normalized
 
 
 def policy_identity(policy: dict[str, Any]) -> str:
-    return domain_hash(DOMAINS["policy"], normalize_policy(policy))
+    normalized = normalize_policy(policy)
+    domain = (
+        DOMAINS["policy_v2"]
+        if normalized["schema"] == "heresy-sec.policy/v2"
+        else DOMAINS["policy"]
+    )
+    return domain_hash(domain, normalized)
 
 
 def build_decision(

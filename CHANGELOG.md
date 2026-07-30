@@ -4,18 +4,53 @@ All notable changes to HERESY-SEC are documented here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-30
+
+### Added
+
+- Optional `heresy-sec.policy/v2` support with a strictly pinned
+  `heresy-geom.profile/v1` module.
+- Pure ordered action-graph construction with domain-separated actor, resource, edge
+  and graph identities.
+- Integer unweighted Forman curvature with explicit parallel-edge semantics.
+- Exact combinatorial-Laplacian characteristic polynomials, square-free
+  factorization, Sturm root isolation and floor-quantized spectra without floats.
+- Authority-chart holonomy residuals, a deterministic `delta_P` gate and
+  `PRIVILEGE_PENROSE_LOOP` witnesses.
+- Shadow Guard fuse state, explicit logged rearm and revalidation, and the complete
+  load-bearing-allow conjunction.
+- Atom-addressable policy, event-range, capture, classical-decision, rule-match and
+  geometry evidence.
+- Typed impossible-configuration detection for privilege loops, egress staircases,
+  trident taint forks, crate-log occlusion, forbidden policy cycles, IPC cardinality
+  and threshold trips.
+- Windowed geometric commitments, decisions, receipts, event log, manifest coverage,
+  verification, inspection and exact replay.
+- Versioned T1–T8 geometry fixtures and adversarial tests, including all four registry
+  classes named by the academic specification.
+- A runnable `geometry_holonomy` example and geometry checks in the installed-artifact
+  self-test.
+- A normative implementation-profile document that pins every under-specified
+  arithmetic, ordering, bound and resolution choice.
+
 ### Changed
 
 - Established `QSOLKCB/HERESY-SEC` as the canonical project home.
 - Preserved the earlier `multimodalas/HERESY-SEC` implementation as relocation
   provenance.
+- Extended summaries and inspection reports for policy v2 while preserving policy v1
+  schema behavior.
+- Made geometry capable only of preserving or tightening a classical result; it can
+  never weaken a hard-boundary denial.
 
 ### Documentation
 
-- Added an attributed HERESY-GEOM integration boundary without claiming that its
-  unseen formal specification is implemented.
-- Added deterministic acceptance requirements for future graph, curvature, holonomy,
-  shadow-guard, atom-policy, impossible-configuration and KR-MPGM work.
+- Attributed the supplied HERESY-GEOM academic architecture to DeltaKingZero /
+  Dr. John Robitaille without claiming author certification, endorsement or ownership.
+- Recorded that the paper names T1–T10 as a minimum battery but defines only T1–T8;
+  v0.2.0 implements the eight specified tests and does not invent T9 or T10.
+- Updated the security, determinism, policy, lineage, roadmap and Open Secure AI
+  ecosystem documentation for the geometry evidence plane.
 
 ### Fixed
 

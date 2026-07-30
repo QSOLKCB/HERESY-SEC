@@ -14,11 +14,27 @@ DOMAINS = MappingProxyType(
     {
         "action": "HERESY-SEC/ACTION/v1",
         "policy": "HERESY-SEC/POLICY/v1",
+        "policy_v2": "HERESY-SEC/POLICY/v2",
         "decision": "HERESY-SEC/DECISION/v1",
         "receipt": "HERESY-SEC/RECEIPT/v1",
         "run": "HERESY-SEC/RUN/v1",
         "manifest": "HERESY-SEC/MANIFEST/v1",
         "implementation": "HERESY-SEC/IMPLEMENTATION/v1",
+        "geometry_vertex": "HERESY-GEOM/VERTEX/v1",
+        "geometry_edge": "HERESY-GEOM/EDGE/v1",
+        "geometry_graph": "HERESY-GEOM/GRAPH/v1",
+        "geometry_curvature": "HERESY-GEOM/CURVATURE/v1",
+        "geometry_spectral": "HERESY-GEOM/SPECTRAL/v1",
+        "geometry_holonomy": "HERESY-GEOM/HOLONOMY/v1",
+        "geometry_obstruction": "HERESY-GEOM/OBSTRUCTION/v1",
+        "geometry_registry": "HERESY-GEOM/REGISTRY/v1",
+        "geometry_event_range": "HERESY-GEOM/EVENT-RANGE/v1",
+        "geometry_rule_match": "HERESY-GEOM/RULE-MATCH/v1",
+        "evidence_atom": "HERESY-GEOM/EVIDENCE-ATOM/v1",
+        "evidence_manifest": "HERESY-GEOM/EVIDENCE-MANIFEST/v1",
+        "geometry": "HERESY-GEOM/COMMITMENT/v1",
+        "geometry_decision": "HERESY-GEOM/DECISION/v1",
+        "geometry_receipt": "HERESY-GEOM/RECEIPT/v1",
     }
 )
 
