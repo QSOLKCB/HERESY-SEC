@@ -4,6 +4,49 @@ All notable changes to HERESY-SEC are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-30
+
+### Added
+
+- `heresy-geom.profile/v2` as the indivisible
+  `heresy-geom.forman-resolve/v1` package.
+- Policy-pinned short, long and stride geometry scheduling with independent spectral
+  histories.
+- Positive-integer weighted Forman mode with exact label-to-weight maps and a hard
+  failure for missing action labels.
+- Per-edge absolute and whole-window L1 Forman thresholds.
+- Mandatory short/long Forman, spectral and holonomy evidence atoms.
+- A geometry manifest and bundle digest binding both windows, companion layers,
+  `delta_P` and the complete Forman profile.
+- Role-tagged aggregate impossible-configuration evidence.
+- T2a–T2g fixtures plus a missing-weight fail-closed test.
+- A runnable `forman_resolve` example and normative profile-v2 document.
+
+### Changed
+
+- Updated the project version and source-bundle identity to v0.3.0.
+- Preserved `heresy-geom.profile/v1` as a frozen compatibility path.
+- Required full dual-window geometry revalidation before Shadow Guard rearm.
+- Made profile v2 geometry summaries and validation reports identify the exact v2
+  profile rather than the frozen v1 constant.
+- Updated profile-v2 run-origin text and artifact documentation.
+
+### Security
+
+- Weighted mode never falls back to an inferred or unit weight.
+- `geometry.forman.learning` must be the literal value `forbidden`.
+- Forman evidence cannot produce `load_bearing_allow` without both spectral and
+  holonomy siblings in both windows.
+- Geometry remains conjunctive and cannot weaken a classical `DENY`.
+
+### Attribution
+
+- Recorded the parallel Forman-resolution package as supplied by 3n0ch.
+- Retained the existing HERESY-GEOM attribution to DeltaKingZero /
+  Dr. John Robitaille without claiming certification, endorsement or affiliation.
+- Preserved the supplied symbolic package header as non-normative provenance because
+  its terms were not defined as executable policy semantics.
+
 ## [0.2.0] - 2026-07-30
 
 ### Added

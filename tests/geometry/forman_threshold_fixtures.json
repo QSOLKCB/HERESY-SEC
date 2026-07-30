@@ -1,0 +1,117 @@
+{
+  "fixture_set": "heresy-geom-conformance/v2",
+  "profile": "heresy-geom.profile/v2",
+  "formula": "4*w(e)-d_w(u)-d_w(v)",
+  "unweighted": [
+    {
+      "name": "path_3",
+      "edges": [
+        [
+          "a",
+          "b",
+          "file.read"
+        ],
+        [
+          "b",
+          "c",
+          "file.read"
+        ]
+      ],
+      "expected_forman": [
+        1,
+        1
+      ]
+    },
+    {
+      "name": "cycle_4",
+      "edges": [
+        [
+          "a",
+          "b",
+          "file.read"
+        ],
+        [
+          "b",
+          "c",
+          "file.read"
+        ],
+        [
+          "c",
+          "d",
+          "file.read"
+        ],
+        [
+          "d",
+          "a",
+          "file.read"
+        ]
+      ],
+      "expected_forman": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "parallel_pair",
+      "edges": [
+        [
+          "a",
+          "b",
+          "file.read"
+        ],
+        [
+          "a",
+          "b",
+          "file.read"
+        ]
+      ],
+      "expected_forman": [
+        0,
+        0
+      ]
+    }
+  ],
+  "weighted": {
+    "weight_map": {
+      "file.read": 2,
+      "file.write": 3
+    },
+    "fixture": {
+      "name": "weighted_two_edge_star",
+      "edges": [
+        [
+          "a",
+          "b",
+          "file.read"
+        ],
+        [
+          "a",
+          "c",
+          "file.write"
+        ]
+      ],
+      "expected_weights": [
+        2,
+        3
+      ],
+      "expected_forman": [
+        1,
+        4
+      ]
+    }
+  },
+  "thresholds": {
+    "edge_abs": {
+      "action_count": 6,
+      "max_abs": 2,
+      "max_window_l1": 100
+    },
+    "window_l1": {
+      "action_count": 5,
+      "max_abs": 2,
+      "max_window_l1": 9
+    }
+  }
+}
