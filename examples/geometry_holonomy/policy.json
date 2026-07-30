@@ -1,0 +1,44 @@
+{
+  "schema": "heresy-sec.policy/v2",
+  "policy_id": "geometry-holonomy-policy",
+  "default_effect": "DENY",
+  "boundaries": {
+    "allowed_authorities": ["READ_ONLY_EXTERNAL", "WORKSPACE_WRITE"],
+    "max_parameter_bytes": 16384,
+    "max_ipc_slots": 32,
+    "network_enabled": false,
+    "allowed_network_schemes": ["https"],
+    "allowed_network_hosts": [],
+    "process_enabled": false,
+    "allowed_processes": [],
+    "file_target_prefixes": ["workspace/"]
+  },
+  "rules": [
+    {
+      "schema": "heresy-sec.rule/v1",
+      "rule_id": "allow-described-file-actions",
+      "priority": 100,
+      "effect": "ALLOW",
+      "services": ["file"],
+      "operations": ["read", "write"],
+      "target_prefixes": ["workspace/"],
+      "agent_ids": ["geometry-agent"],
+      "authorities": ["READ_ONLY_EXTERNAL", "WORKSPACE_WRITE"]
+    }
+  ],
+  "geometry": {
+    "module": "heresy-geom",
+    "version": "1",
+    "fixture_set": "heresy-geom-conformance/v1",
+    "window": 16,
+    "quantize": {
+      "scale": 16,
+      "mode": "FLOOR"
+    },
+    "max_forman_abs": 64,
+    "max_spectral_l2_delta": 4096,
+    "epsilon_P": 1,
+    "forbid_cycles": [],
+    "require_delta_P": true
+  }
+}

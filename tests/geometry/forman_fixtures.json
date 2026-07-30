@@ -1,0 +1,1 @@
+{"fixtures":[{"edges":[["a","b"],["b","c"]],"expected_forman":[1,1],"name":"path_3"},{"edges":[["a","b"],["b","c"],["c","d"],["d","a"]],"expected_forman":[0,0,0,0],"name":"cycle_4"},{"edges":[["a","b"],["a","b"]],"expected_forman":[0,0],"name":"parallel_pair"}],"schema":"heresy-geom.forman-fixtures/v1"}

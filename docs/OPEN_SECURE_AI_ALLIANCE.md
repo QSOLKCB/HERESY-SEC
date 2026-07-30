@@ -54,16 +54,16 @@ reproduce the result. It must never present model consensus as proof.
 
 ## Stack mapping
 
-| Alliance-level concern | Present v0.1.0 contract | Intended extension |
+| Alliance-level concern | Present v0.2.0 contract | Intended extension |
 | --- | --- | --- |
 | Agent identity | `producer.agent_id` | Validate SPIFFE-compatible workload IDs |
 | Workload identity | Optional `producer.workload_id` | SPIFFE/SPIRE verification adapter |
 | Model diversity | `OPEN_WEIGHT`, `CLOSED`, `NO_MODEL`, `UNKNOWN` | Adapter manifests and capability declarations |
 | Harness provenance | Harness ID and optional SHA-256 | Signed harness/build attestations |
 | Permissions | Requested authority and policy boundaries | Capability profiles mapped from real runtimes |
-| Guardrails | Hard deterministic checks before policy rules | Versioned, interoperable policy vocabulary |
+| Guardrails | Hard checks plus pinned action-graph, holonomy and Shadow Guard gates | Cross-language geometry vectors and interoperable policy vocabulary |
 | Logs | Exact raw records plus normalized actions | Streaming capture API with bounded backpressure |
-| Evaluation | Exact replay and examples | Public incident fixtures and conformance suite |
+| Evaluation | Exact replay plus T1–T8 classical/geometry fixtures | Public incident fixtures and independent conformance suites |
 | Findings exchange | Canonical decisions | SARIF 2.1.0 exporter |
 | Supply-chain trust | Source-bundle SHA-256 | in-toto/Sigstore-compatible attestations |
 | Human coordination | `REVIEW` effect | Review receipts and coordinated-disclosure handoff |
@@ -78,7 +78,14 @@ reproduce the result. It must never present model consensus as proof.
 - fuzz malformed JSON and policy boundaries;
 - demonstrate replay on thousands of synthetic events.
 
-### v0.2.x — interoperability without authority expansion
+### v0.2.x — geometry without authority expansion
+
+- maintain a bounded, integer/rational geometry profile;
+- publish stable action-graph, curvature, spectral, holonomy and registry fixtures;
+- keep geometric evidence subordinate to hard classical boundaries;
+- seek independent reproduction of geometry identities and receipts.
+
+### v0.3.x — interoperability without authority expansion
 
 - add capture adapters for common JSONL agent traces;
 - add SARIF export for decisions and reason codes;
@@ -89,7 +96,7 @@ reproduce the result. It must never present model consensus as proof.
 Adapters translate evidence. They must not silently grant file, process or network
 authority.
 
-### v0.3.x — authenticated provenance
+### v0.4.x — authenticated provenance
 
 - define SPIFFE-compatible workload identity validation;
 - add detached signature and transparency-log hooks;
@@ -99,7 +106,7 @@ authority.
 
 No custom cryptography should be invented.
 
-### v0.4.x — reproducible multi-model forensics
+### v0.5.x — reproducible multi-model forensics
 
 - capture competing findings from open and closed models;
 - use deterministic adjudication after capture;
@@ -131,4 +138,3 @@ A credible external proposal should include:
 
 The useful niche is narrow and strong: portable evidence, deterministic boundaries and
 exact replay across a heterogeneous defensive AI ecosystem.
-

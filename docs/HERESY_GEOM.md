@@ -1,106 +1,93 @@
-# HERESY-GEOM integration notes
+# HERESY-GEOM status and attribution
 
 ## Status
 
-**Attributed external proposal; not implemented in HERESY-SEC v0.1.0.**
+HERESY-SEC v0.2.0 implements the versioned
+[`heresy-geom.profile/v1`](HERESY_GEOM_PROFILE.md) contract.
 
-A title-page screenshot supplied to the project on 30 July 2026 identifies:
+The implementation is derived from **HERESY-GEOM — A Deterministic Geometric Upgrade
+Architecture for HERESY-SEC**, an academic architectural specification supplied to the
+project and attributed to **DeltaKingZero / Dr. John Robitaille**, dated
+**2026-07-27 UTC**.
 
-> HERESY-GEOM — A Deterministic Geometric Upgrade Architecture for HERESY-SEC
+The paper says it builds on the public `multimodalas/HERESY-SEC` determinism contract
+without claiming ownership of that project. The maintained HERESY-SEC project now
+lives at [`QSOLKCB/HERESY-SEC`](https://github.com/QSOLKCB/HERESY-SEC).
 
-The screenshot attributes the document to **DeltaKingZero / Dr. John Robitaille**,
-dates it **2026-07-27 UTC**, and describes it as an academic, falsifiable,
-replay-stable and non-heuristic architectural specification.
+No author endorsement, certification, affiliation or ownership is claimed. The paper
+has not been added to this repository because redistribution permission was not
+provided. This implementation cites and attributes its architectural source while
+publishing independently reviewable code, fixtures and profile rules.
 
-The visible title page names:
+## What is implemented
 
-- action graphs;
-- discrete curvature;
-- holonomy gates;
-- shadow-guard integrity;
-- atom-addressable policy objects;
-- an impossible-configuration registry;
-- a KR-MPGM spine.
+Policy v2 adds a bounded, standard-library-only geometry path:
 
-Its visible lineage note says it builds on the public
-`multimodalas/HERESY-SEC` determinism contract without claiming ownership of that
-project. The canonical maintained project has since moved to
-[`QSOLKCB/HERESY-SEC`](https://github.com/QSOLKCB/HERESY-SEC).
+- canonical directed action multigraphs;
+- pinned integer Forman curvature;
+- exact integer characteristic polynomials and Sturm-isolated, floor-quantized
+  Laplacian spectra;
+- authority-chart holonomy and `delta_P`;
+- Shadow Guard fuse, trip, explicit rearm and revalidation;
+- atom-addressable evidence and matched-rule references;
+- typed impossible-configuration witnesses;
+- domain-separated geometric commitments and forward-only receipts;
+- full manifest verification, inspection and exact replay;
+- the eight falsifiable tests actually defined in the paper.
 
-Only the title page and the beginning of the abstract were available. This document
-therefore records an integration boundary, not an interpretation of unseen formulas
-or a claim that the proposal has been implemented.
+Geometry runs after the existing hard boundaries and classical policy rules. It can
+keep a result unchanged or make it stricter. It cannot turn a classical denial into
+review or allow.
 
-## Why implementation is deferred
+## Why this is an implementation profile
 
-HERESY-SEC cannot assign guessed meanings to geometric terms and still call the result
-deterministic or falsifiable. A conforming implementation needs the complete normative
-specification, including:
+The paper is an architecture, not a byte-complete interoperability standard. It leaves
+several choices open, including:
 
-1. exact definitions and domains for every geometric object;
-2. canonical encodings, ordering rules and duplicate handling;
-3. integer, fixed-point or explicitly rational arithmetic rules;
-4. graph rules for loops, parallel edges, disconnected components and orientation;
-5. overflow, bound and invalid-state behavior;
-6. decision precedence and interaction with existing hard boundaries;
-7. worked examples and adversarial counterexamples;
-8. golden conformance vectors with expected identities and decisions;
-9. licence and redistribution terms for specification text or reference code.
+- complete graph endpoint and resource canonicalization rules;
+- the fixed operation alphabet and edge orientation;
+- exact Forman constants and parallel/self-loop behavior;
+- directed versus undirected spectral mode and the large-window algorithm cutoff;
+- authority-state lattice encoding and transition composition;
+- detector algorithms and exact residual meanings for each registry class;
+- which failures map to `AtlasOnly`, `GapLift` or `Discharge`;
+- Shadow Guard rearm placement;
+- canonical object schemas and domain-separation strings.
 
-Without those materials, code bearing the HERESY-GEOM name would be an unverifiable
-look-alike rather than a faithful implementation.
+Calling one arbitrary resolution “the specification” would make replay claims
+ambiguous. `heresy-geom.profile/v1` therefore pins every choice, bound and artifact
+shape that affects identity. The profile name and fixture-set version are hashed in
+policy v2.
 
-## Non-negotiable integration contract
+## Specification inconsistency
 
-Any future geometric extension must preserve the HERESY-SEC runtime architecture:
+Sections 14 and 18 say T1–T10 form the minimum battery. The document lists and defines
+only T1 through T8. HERESY-SEC v0.2.0 implements all eight defined tests and records the
+gap rather than inventing T9 or T10.
 
-- inputs remain untrusted descriptions and are never executed;
-- exact bytes are captured before parsing;
-- floats, duplicate keys, cycles, unsafe integers and unexpected fields remain
-  rejected in identity-bearing structures;
-- graph streams use explicit, unique sequences and canonical endpoint identities;
-- any rational quantity has one canonical numerator/denominator form;
-- domain-separated SHA-256 commits every new object and witness;
-- hard authority, network, process, file, IPC and size boundaries execute before any
-  geometric rule;
-- geometric evidence may preserve a decision or make it stricter, but may never turn a
-  hard-boundary `DENY` into `REVIEW` or `ALLOW`;
-- exact replay fails on any changed byte, source bundle, registry, graph, witness or
-  receipt link;
-- no host clock, entropy, network response or model output enters canonical identity.
+## Deliberate omissions
 
-## Proposed module boundary
+Profile v1 does not implement:
 
-Once the normative specification is available, the extension should be isolated
-behind a versioned contract rather than mixed into the v1 action schema:
+- Ollivier–Ricci curvature;
+- floating-point spectral solvers or power iteration;
+- policy-specified edge weights;
+- regular-expression path automata;
+- live-worker, host, filesystem or network observation;
+- SPECTRAL sonification;
+- a frontier model, EDR, SIEM, sandbox or autonomous response path;
+- author-certified HERESY-GEOM conformance;
+- the doctrinal KR-MPGM vocabulary as additional runtime state beyond the concrete
+  graph, fuse, holonomy, resolution and window primitives.
 
-```text
-captured action stream
-        |
-        v
-existing hard boundaries
-        |
-        v
-canonical action graph ----> impossible-configuration registry
-        |                                  |
-        v                                  v
-geometric witnesses --------------> deterministic gate result
-        |
-        v
-existing policy precedence, receipts, manifest and exact replay
-```
-
-Candidate artifacts, subject to the actual specification, would be versioned objects
-such as `action-graph.json`, `geometric-witnesses.json` and
-`impossible-configurations.json`. Names and schemas must not be frozen until they can
-be checked against the author's complete text.
+These omissions keep the implementation falsifiable and within HERESY-SEC's small,
+offline runtime boundary.
 
 ## Open Secure AI ecosystem relevance
 
-If formally specified and independently testable, geometric witnesses could become an
-additional deterministic guardrail and evaluation signal in a broader defensive AI
-stack. They would complement model and harness findings; they would not turn
-HERESY-SEC into a frontier model, EDR, SIEM, sandbox or autonomous response system.
+The geometry layer can contribute replay-stable guardrail evidence beneath open and
+closed forensic models. It gives a global action shape an auditable identity and makes
+inconsistent authority closure visible without trusting model prose.
 
-No affiliation with or endorsement by HERESY-GEOM's author, NVIDIA, the Open Secure
-AI Alliance or any other external project is claimed.
+HERESY-SEC remains independent. It does not claim Open Secure AI Alliance membership,
+NVIDIA endorsement or an accepted contribution.

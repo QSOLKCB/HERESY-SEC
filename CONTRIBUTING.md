@@ -12,3 +12,7 @@ Identity-bearing byte changes require explicit review because they can break exa
 replay. New adapters must translate bounded evidence without silently granting
 authority.
 
+Changes to geometry arithmetic, graph orientation, authority masks, detector
+semantics, fixture expectations or Shadow Guard transitions require a new
+`heresy-geom` profile or fixture-set compatibility decision. Do not silently change
+`heresy-geom.profile/v1`.

@@ -74,6 +74,7 @@ class CliAndExampleTests(unittest.TestCase):
     def test_examples_have_expected_effects(self) -> None:
         expected = {
             "file_integrity": ("ALLOWED", 0),
+            "geometry_holonomy": ("DENIED", 3),
             "network_constraint": ("DENIED", 3),
             "process_boundary": ("DENIED", 3),
             "ipc_slot_management": ("DENIED", 3),
@@ -82,9 +83,11 @@ class CliAndExampleTests(unittest.TestCase):
             runs = Path(directory) / "runs"
             for name, (state, exit_code) in expected.items():
                 base = ROOT / "examples" / name
+                command = "monitor" if name == "geometry_holonomy" else "run"
+                source = "events.jsonl" if name == "geometry_holonomy" else "action.json"
                 result = self.command(
-                    "run",
-                    str(base / "action.json"),
+                    command,
+                    str(base / source),
                     "--policy",
                     str(base / "policy.json"),
                     "--runs-dir",

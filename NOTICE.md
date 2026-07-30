@@ -1,6 +1,6 @@
 # Notice
 
-HERESY-SEC v0.1.0
+HERESY-SEC v0.2.0
 
 Copyright 2026 Trent Slade and contributors.
 
@@ -17,10 +17,12 @@ MPL-2.0:
 
 https://github.com/QSOLKCB/QSOLAI
 
-HERESY-GEOM is the title of an independently authored architectural specification
-attributed in a supplied title-page screenshot to DeltaKingZero / Dr. John
-Robitaille. Its visible feature names are referenced for interoperability planning
-only. No HERESY-GEOM implementation or ownership is claimed.
+HERESY-GEOM is the title of an independently authored academic architectural
+specification attributed to DeltaKingZero / Dr. John Robitaille and dated
+2026-07-27 UTC. HERESY-SEC v0.2.0 contains an independently reviewable,
+standard-library implementation profile derived from that architecture. No ownership,
+author certification, endorsement or affiliation is claimed. The supplied
+specification document is not redistributed by this repository.
 
 The Open Secure AI Alliance, NVIDIA, Hugging Face, the Linux Foundation, OpenSSF,
 Akrites, SPIFFE, SPIRE, Sigstore, in-toto, SARIF and SPECTRAL names are used only to

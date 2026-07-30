@@ -43,6 +43,15 @@ A supplied title-page screenshot identifies an independently authored
 lineage note says it builds on the public `multimodalas/HERESY-SEC` determinism
 contract without claiming ownership of that project.
 
-No HERESY-GEOM source code or normative specification has been copied into this
-repository. Its visible feature names are preserved only as attributed integration
-notes in [HERESY_GEOM.md](HERESY_GEOM.md).
+The full academic specification was later supplied to the project. Its text and DOCX
+are not redistributed here because redistribution permission was not provided.
+HERESY-SEC v0.2.0 contains an independently written implementation profile derived
+from the attributed architecture: action graphs, integer Forman curvature, exact
+spectral fingerprints, authority holonomy, Shadow Guard state, evidence atoms,
+impossible-configuration witnesses and geometric receipt chaining.
+
+The architecture leaves byte-level and arithmetic choices open. Those choices are
+clearly identified as HERESY-SEC's `heresy-geom.profile/v1`; no author certification,
+endorsement, affiliation or ownership is claimed. See
+[HERESY-GEOM status](HERESY_GEOM.md) and the
+[implementation profile](HERESY_GEOM_PROFILE.md).

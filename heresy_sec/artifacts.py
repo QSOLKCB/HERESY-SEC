@@ -11,13 +11,22 @@ from .errors import HeresySecError
 
 
 RUN_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-README_ORIGIN = (
+README_ORIGIN_V1 = (
     "HERESY-SEC v0.1.0 deterministic security evidence run\n"
     "\n"
     "Inputs describe proposed or observed actions. HERESY-SEC executes none of them.\n"
     "SHA-256 receipts prove integrity and lineage, not signer authenticity.\n"
     "No wall-clock value or host path is generated into canonical identity.\n"
 ).encode("utf-8")
+README_ORIGIN_V2 = (
+    "HERESY-SEC v0.2.0 deterministic security evidence and geometry run\n"
+    "\n"
+    "Inputs describe proposed or observed actions. HERESY-SEC executes none of them.\n"
+    "HERESY-GEOM uses bounded, replay-stable geometry and never weakens a classical denial.\n"
+    "SHA-256 receipts prove integrity and lineage, not signer authenticity.\n"
+    "No wall-clock value or host path is generated into canonical identity.\n"
+).encode("utf-8")
+README_ORIGIN = README_ORIGIN_V1
 
 
 def safe_run_directory(runs_root: Path, run_name: str) -> Path:

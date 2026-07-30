@@ -1,6 +1,6 @@
 # Policy format
 
-## Top-level contract
+## Policy v1
 
 ```json
 {
@@ -14,6 +14,54 @@
 
 `default_effect` is `ALLOW`, `DENY` or `REVIEW`. Security deployments should normally
 use `DENY`.
+
+Policy v1 remains accepted and emits no geometry artifacts.
+
+## Policy v2
+
+Policy v2 has the same classical boundaries and rules plus one required exact geometry
+object:
+
+```json
+{
+  "schema": "heresy-sec.policy/v2",
+  "policy_id": "geometry-policy",
+  "default_effect": "DENY",
+  "boundaries": {},
+  "rules": [],
+  "geometry": {
+    "module": "heresy-geom",
+    "version": "1",
+    "fixture_set": "heresy-geom-conformance/v1",
+    "window": 16,
+    "quantize": {"scale": 16, "mode": "FLOOR"},
+    "max_forman_abs": 64,
+    "max_spectral_l2_delta": 4096,
+    "epsilon_P": 1,
+    "forbid_cycles": [],
+    "require_delta_P": true
+  }
+}
+```
+
+Every geometry field is required. Unknown fields, missing fields, unsupported module
+or fixture-set versions, floats and out-of-range integers fail closed.
+
+| Geometry field | Meaning |
+| --- | --- |
+| `module`, `version` | Exact implementation selector: `heresy-geom`, `1` |
+| `fixture_set` | Exact conformance-vector selector |
+| `window` | Consecutive action count, `1..32` |
+| `quantize` | Integer scale `1..64` and literal `FLOOR` |
+| `max_forman_abs` | Inclusive absolute-curvature ceiling |
+| `max_spectral_l2_delta` | Inclusive integer spectral-change ceiling |
+| `epsilon_P` | Holonomy Hamming threshold, `1..4` |
+| `forbid_cycles` | Exact directed `service.operation` cycle patterns |
+| `require_delta_P` | `true` discharges holonomy residuals; `false` requires review |
+
+Cycle patterns contain 1–8 lower-case labels. At most 16 patterns are accepted.
+Rotational duplicates are rejected. See the complete
+[`heresy-geom.profile/v1`](HERESY_GEOM_PROFILE.md) contract.
 
 ## Boundaries
 
@@ -62,3 +110,9 @@ Rules cannot override:
 - missing or out-of-range IPC slots.
 
 Matched rule IDs remain in the decision trace even when a boundary forces denial.
+
+For policy v2, classical evaluation still occurs first. A geometry window then reduces
+its classical and geometric results using the same conservative order: `DENY`,
+`REVIEW`, `ALLOW`. Geometry can never weaken a hard-boundary denial. A Shadow Guard
+fuse can additionally turn a later would-be allow into denial until an explicit,
+classically allowed rearm action begins a successfully revalidated window.
