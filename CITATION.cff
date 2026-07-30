@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use HERESY-SEC, please cite this software."
-title: "HERESY-SEC v0.2.0: Deterministic Policy, Geometric Evidence and Exact Replay for AI-Agent Actions"
+title: "HERESY-SEC v0.3.0: Dual-Window Geometric Evidence and Exact Replay for AI-Agent Actions"
 type: software
-version: 0.2.0
+version: 0.3.0
 date-released: 2026-07-30
 authors:
   - family-names: Slade
@@ -15,7 +15,9 @@ keywords:
   - AI agents
   - exact replay
   - discrete geometry
+  - Forman curvature
   - graph holonomy
+  - dual-window evidence
   - canonical JSON
   - incident forensics
   - policy receipts
