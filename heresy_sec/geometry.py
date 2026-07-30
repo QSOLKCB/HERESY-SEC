@@ -597,10 +597,15 @@ def build_registry(
         edge["action_id"]: edge
         for edge in graph["edges"]
     }
+    actor_edges: dict[tuple[str, str | None], list[dict[str, Any]]] = {}
+    graph_edges_by_action = {
+        edge["action_id"]: edge
+        for edge in graph["edges"]
+    }
     for action in actions:
         edge = graph_edges_by_action[action["action_id"]]
-        actor_edges.setdefault(action["producer"]["agent_id"], []).append(edge)
-    required_masks = {
+        actor_key = (action["producer"]["agent_id"], action["producer"]["workload_id"])
+        actor_edges.setdefault(actor_key, []).append(edge)
         AUTHORITY_MASKS["READ_ONLY_EXTERNAL"],
         AUTHORITY_MASKS["WORKSPACE_WRITE"],
         AUTHORITY_MASKS["NETWORK"],
