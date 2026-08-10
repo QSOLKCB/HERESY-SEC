@@ -1,0 +1,48 @@
+{
+  "schema": "heresy-sec.defensive-corpus/v1",
+  "name": "yaml-doctoral-qualifying-examination-v4",
+  "description": "Static adversarial YAML parser-resilience corpus; assemble and verify before controlled sandbox use.",
+  "assembled": {
+    "filename": "EXAM.yaml",
+    "sha256": "fa440e63da4cad5943ed1df2a7b7be5c6d4dd69d885a2419ebd9ad6993751125",
+    "bytes": 50695,
+    "lines": 1381
+  },
+  "parts": [
+    {
+      "path": "source/part-01.yaml.part",
+      "sha256": "4d10714ddcc430fa69c6ec36373fde3003a7fcb8403ff0ed3b396e24b974f396",
+      "bytes": 8704
+    },
+    {
+      "path": "source/part-02.yaml.part",
+      "sha256": "d531087ea2aa76ff259b08fe7adb9249d9878552e787d35911953ba52c2c2cea",
+      "bytes": 6983
+    },
+    {
+      "path": "source/part-03.yaml.part",
+      "sha256": "9d875960affb5aad6d4507ad28027f96d5adc07cbc3614fd53b9457db8f3609b",
+      "bytes": 6948
+    },
+    {
+      "path": "source/part-04.yaml.part",
+      "sha256": "daf3c45ca6a5f1278eb3c852c0ee8c8cbd59e7c914d41fc027a38c5a2e256a88",
+      "bytes": 5794
+    },
+    {
+      "path": "source/part-05.yaml.part",
+      "sha256": "443e77d4e6a557bf8e7c27fc71d5c74579d0378fea7d62f4d8f03e8555b38f07",
+      "bytes": 5955
+    },
+    {
+      "path": "source/part-06.yaml.part",
+      "sha256": "6ce66c5e9a2580416fab38b16b9cd01f7c35d1ea3b08dbaf196d8f1d7ecc4cf0",
+      "bytes": 8032
+    },
+    {
+      "path": "source/part-07.yaml.part",
+      "sha256": "ed828128bfd5b48809fa6f45622a1483df5c48fdf0d875556069d9d77e05dc3f",
+      "bytes": 8279
+    }
+  ]
+}
