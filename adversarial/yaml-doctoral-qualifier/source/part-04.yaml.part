@@ -1,0 +1,200 @@
+#               CR (escape), not a line-break-to-normalize. Prove that block
+#               CRLF normalization ≠ quoted `\r` preservation. Stage?
+#       Q7.11g  P11C (libyaml) vs pure P11 on doc_fold — identical repr?
+
+poetry:
+  lit_keep: |+
+    sacred
+
+
+  lit_strip: |-
+    dies
+
+  lit_clip: |
+    default
+
+  fold_keep: >+
+    one
+    long
+
+  fold_strip: >-
+    one
+    long
+
+  fold_clip: >
+    one
+    long
+
+  fold_blank: >
+    para one
+
+    para two
+
+  ind2: |2
+    content-at-2
+      more-at-4
+
+  ind2strip: |2-
+    x
+
+  fold_more_indent: >
+    normal folded line
+      more-indented keeps newline
+    back to fold
+
+  empty_lit: |
+  empty_fold: >
+
+  contains_markers: |
+    ---
+    this: is still a string
+    ...
+    not a second document
+
+  tab_content: |
+    col1	col2	col3
+
+  # tab_indent:
+  # 	illegal-tab-indent: true
+
+  escapes_d: "\n\t\x21\u0041\U0001F4A9\""
+  escapes_s: '\n\t\x21\u0041'
+  escapes_p: \n\t\x21
+
+  # Q7.9  Double-quoted line folding: trailing \ escapes the newline.
+  folded_dq: "line one\
+    line two"
+
+  # Q7.10 Hex/unicode escapes illegal in single quotes — confirm only '' works:
+  sq_quote: 'it''s fine'
+  # sq_bad: '\x41'   # remains backslash-x or error? (plain content)
+
+  # Q7.11 fixtures live in the REPL (CRLF cannot be trusted in this file's EOL).
+  # Reference LF-only baselines for hash comparison:
+  fold_crlf_baseline: >
+    one
+    long
+  fold_strip_crlf_baseline: >-
+    one
+    long
+  fold_keep_crlf_baseline: >+
+    one
+    long
+
+  lit_crlf_baseline: |
+    one
+    long
+
+  fold_blank_crlf_baseline: >
+    para one
+
+    para two
+
+  # Quoted CR is NOT a line break — survives as U+000D (contrast Q7.11a).
+  quoted_cr_literal: "one\rtwo"
+  quoted_crlf_literal: "one\r\ntwo"
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 8 — FLOW STYLE PSYOPS
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q8.1  Type of every fl element under P11 and R12/CORE.
+# Q8.2  fm key count under P11 (include PY-EQ if any int/bool clash).
+# Q8.3  TRAILING COMMAS — folklore says "illegal in YAML".
+#       Empirically on PyYAML 6.x + libyaml:
+#         safe_load("[1, 2, 3,]")  →  often SUCCEEDS (list of 3)
+#         safe_load("{a: 1,}")    →  often SUCCEEDS
+#         safe_load("{a:1,}")     →  may parse as key "a:1" with null value!
+#       Q8.3a  Run all three under P11 and P11C. Record results.
+#       Q8.3b  Spec citation: are trailing commas permitted? (No.) So which
+#              STAGE is being too permissive — scanner or parser?
+#       Q8.3c  G12 / R12 behavior for the same three literals.
+# Q8.4  Uncomment flow_ck_list_key — unhashable?
+# Q8.5  Uncomment explicit_flow — unhashable?
+# Q8.6  adjacent_maps / adjacent_seqs: types after load?
+# Q8.7  empties: type of a, b, c, d under P11.
+
+flow_vs_block:
+  fl: [yes, no, on, off, NO, "NO", true, null, ~, 010, 12:34, .inf, 1.0e+3, 1:2:3]
+
+  fm: {yes: no, on: off, NO: YE, true: false, 010: 0x10, a: , b: null, ~: x}
+
+  nested: {a: [1, 2, {b: yes}], c: {d: no, e: [on, off]}}
+
+  # trailing_comma_list: [1, 2, 3,]
+  # trailing_comma_map: {a: 1,}
+  # trailing_comma_map_nospace: {a:1,}
+
+  flow_ck: {~: null-key, true: bool-key, "NO": quoted-key}
+  # flow_ck_list_key: {[a, b]: list-key}
+
+  empties: {a: , b: null, c: ~, d: ""}
+  adjacent_maps: [{a: 1},{b: 2}]
+  adjacent_seqs: [[1],[2]]
+  # explicit_flow: {? [x, y]: z}
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 9 — TAGS (EXPLICIT TYPING, LOCAL TAGS, TYPES REPOSITORY, RCE)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q9.1  !!int "1:2:3" — does explicit !!int accept sexagesimal text under P11?
+#       (Explicit tags bypass implicit regexes but constructors still validate.)
+# Q9.2  !!bool "yes" under P11 vs CORE (1.2 bool domain is true/false only).
+# Q9.3  Uncomment b_bad — exception?
+# Q9.4  !!null "anything" — None or error?
+# Q9.5  !!binary with embedded whitespace / block form trailing newlines.
+# Q9.6  !!timestamp "not a date" — ConstructorError?
+# Q9.7  !!set / !!pairs / !!omap under P11 safe_load vs P11F vs R12.
+# Q9.8  set length after load (dedup).
+# Q9.9  Local !local / unknown !!garbage under safe_load.
+# Q9.10 stacked: type, value, anchor shared with stacked_alias?
+# Q9.11 Explain why yaml.load is banned. Name three !!python/* gadgets.
+# Q9.12 ORDER OF NODE PROPERTIES: &id !!str yes  vs  !!str &id yes
+#       Are both legal? Same node? Spec section on node properties.
+# Q9.13 Construct !!int "0755" under P11 — 493, 755, or error?
+#       (Base detection under explicit int constructor.)
+# Q9.14 P11U only (sandbox): show the shortest !!python/object/apply payload
+#       that runs a no-op. Then explain the constructor registry difference
+#       between Loader, FullLoader, SafeLoader, and unsafe_load.
+
+explicitly_cursed:
+  s_num: !!str 010
+  s_bool: !!str yes
+  s_null: !!str null
+  i_str: !!int "42"
+  i_sex: !!int "1:2:3"
+  i_oct: !!int "0755"
+  f_str: !!float "1.0e+3"
+  f_bare: !!float "1e3"            # Q9.15 explicit float of bare 1e3 — OK?
+  f_inf: !!float ".inf"
+  b_yes: !!bool "yes"
+  b_true: !!bool "true"
+  b_True: !!bool "True"
+  # b_bad: !!bool "maybe"
+  n_any: !!null "anything"
+  n_empty: !!null ""
+  bin: !!binary aGVsbG8=
+  bin_ws: !!binary "aGVs\nbG8="
+  # bin_ws_block: !!binary |
+  #   aGVsbG8=
+  ts: !!timestamp 2026-08-09
+  # ts_str: !!timestamp "not a date"
+
+  set: !!set { one, two, two }
+  # pairs: !!pairs
+  #   - [a, 1]
+  #   - [a, 2]
+  # omap: !!omap
+  #   - [one, 1]
+  #   - [two, 2]
+
+  # local: !local something
+  # unknown_global: !!garbage value
+
+  stacked: &stk !!str yes
+  stacked_alias: *stk
+
+  # pwn: !!python/object/apply:os.system ["echo pwned"]
+  # pwn2: !!python/name:os.system

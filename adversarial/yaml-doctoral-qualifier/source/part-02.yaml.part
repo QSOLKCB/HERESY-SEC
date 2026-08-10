@@ -1,0 +1,200 @@
+  # 0: integer-zero
+  # Then explain the body count using PY-EQ.
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 2 — NUMEROLOGY BLACK MASS (THE FLOAT REGEX INQUISITION)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# CRITICAL CORRECTION TO FOLKLORE (including prior exam transcripts):
+#   Under P11 (and SPEC11 float regexp), scientific notation is NOT "1e3".
+#   The 1.1 float production effectively demands a '.' somewhere in the
+#   significand, and when an exponent is present it is [eE][-+]digits
+#   (SIGN REQUIRED). Empirically on PyYAML 6.x:
+#       safe_load("1e3")        →  str "1e3"
+#       safe_load("1.0e3")      →  str "1.0e3"   # exponent lacks [-+]
+#       safe_load("1.0e+3")     →  float 1000.0
+#       safe_load("6.8523015e+5") → float
+#   If you wrote "1e3 is float" on v3, you owe the tribunal a corrigendum.
+#
+# For EACH key: type+value under P11, R12/CORE, JS, FS, SPEC11.
+# Mark UNREPRESENTABLE where a schema has no int/float.
+# Also mark the STAGE if parsers disagree (resolver regex vs constructor).
+
+numerology:
+  # --- octal identity crisis ---
+  permissions: 0755                 # P11 int 493 | CORE int 755 | FS str
+  also_permissions: 0o755           # P11 str | CORE int 493
+  octal_cap_O: 0O755                # capital O — anyone accept?
+  triple_zero: 000
+  plus_octal: +0755
+  minus_octal: -0755
+  plus_new_octal: +0o10
+  bare_o: 0o
+  octal_bad_digit: 0789             # digit 8/9 — whole scalar falls through?
+  octal_utf: 0o8
+
+  # --- hex / bin ---
+  hex_l: 0xDEAD
+  hex_u: 0XDEAD
+  hex_mixed: 0xDeAd
+  hex_us: 0xDE_AD
+  bin_l: 0b101010
+  bin_u: 0B101010
+  bin_us: 0b_1010
+  bin_bad: 0b102
+
+  # --- sexagesimal (1.1 only; regex is vicious) ---
+  # SPEC11 int sexagesimal: [-+]?[1-9][0-9_]*(:[0-5]?[0-9])+
+  # Note: FIRST field may exceed 59; LATER fields must be 0..59.
+  clock: 12:34:56                   # 45296
+  short: 12:34                      # 754
+  long: 1:2:3:4:5
+  neg: -1:2:3
+  plus_sex: +1:2:3
+  bad_digit: 12:60                  # 60 in a non-leading field → not int
+  sixty_lead: 60:00                 # Q2.1  int 3600 or str? (leading field!)
+  zero_start: 0:30                  # Q2.2  leading 0 field — sexagesimal?
+  zero_zero: 00:30
+  leading_zero_sex: 01:02:03
+  one_two: 1:2                      # 62
+  one_zero_two: 1:02                # same 62?
+  single_colon_end: "12:"           # bare 12: is ScannerError
+  just_colons: ":"
+  sex_float: 190:20:30.15           # Q2.3  sexagesimal FLOAT under P11?
+
+  # --- THE FLOAT INQUISITION (do not skip) ---
+  sci_bare: 1e3                     # Q2.4  STR under P11 — confirm
+  sci_dot_nosign: 1.0e3             # Q2.5  still STR — confirm
+  sci_dot_plus: 1.0e+3              # Q2.6  float 1000.0
+  sci_dot_minus: 1.0e-3
+  sci_canon: 6.8523015e+5           # YAML 1.1 canonical example
+  sci_us: 685.230_15e+03            # underscore + signed exp
+  sci_p: 1E+3                       # no dot — str or float?
+  sci_m: 1e-3
+  lead_dot: .5
+  trail_dot: 5.
+  both_dot: ".5."
+  just_dot: "."
+  two_dots: 1.2.3
+  three_nums: 10.20.0.2
+  us_int: 1_000_000                 # 1.1 yes; 1.2 core no
+  us_float: 1_000.000_1
+  us_bad: _100
+  us_trail: 100_
+
+  # --- signed zeros & specials ---
+  z0: 0
+  z00: 00
+  zp: +0
+  zn: -0                            # int 0; sign lost at construct?
+  zpf: +0.0
+  znf: -0.0                         # IEEE signbit preserved?
+  zdot: 0.
+  zldot: .0
+  pinf: .inf
+  Pinf: .Inf
+  PINF: .INF
+  ninf: -.inf
+  NInf: -.Inf
+  inf_word: inf                     # plain string both major schemas
+  Inf_word: Inf
+  Infinity: Infinity
+  pnan: .nan
+  PNaN: .NaN
+  PNAN: .NAN
+  nan_word: nan
+  NaN_word: NaN
+
+  # --- magnitude / host limits ---
+  big: 999999999999999999999999999999
+  big_hex: 0xFFFFFFFFFFFFFFFF
+  tiny: 1.0e-400                    # underflow → 0.0?
+  huge: 1.0e+400                    # overflow → inf?
+  # Q2.7  JS Number: which of big / big_hex lose exact integer identity?
+  # Q2.8  After P11 load, math.copysign(1, numerology['znf']) — sign?
+
+  # Q2.9  DIFFERENTIAL TABLE (mandatory, full credit only if complete):
+  #       rows: 0755, 0o755, 1e3, 1.0e+3, 12:34:56, 60:00, 0:30, 1_000, .nan, -0
+  #       cols: FS, JS, CORE, SPEC11, P11, G12
+  #       cells: type+value or ERR
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 3 — TIME IS A FLAT CIRCLE (UNTIL IT'S A STRING)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q3.1  Which become datetime.date / datetime.datetime under P11?
+# Q3.2  Under CORE / R12: ALL str — confirm each; note any ruamel extensions.
+# Q3.3  Round-trip P11 load → dump → load. Does a date pick up a time?
+# Q3.4  no_day: 2026-8-9 — single-digit month/day: timestamp or str? Stage?
+# Q3.5  canon3 uses space + short offset `-5` (not `-05:00`). Still timestamp?
+# Q3.6  Timezone: does P11 produce aware or naive datetimes for Z vs +09:30?
+# Q3.7  Dump then load a timezone-aware datetime under P11 — offset preserved?
+
+when_things_happened:
+  d: 2026-08-09
+  d_space: 2026-08-09 16:03:00
+  d_t: 2026-08-09T16:03:00Z
+  d_off: 2026-08-09T16:03:00+09:30
+  d_off2: 2026-08-09T16:03:00+0930
+  d_frac: 2026-08-09T16:03:00.5Z
+  d_frac_space: 2026-08-09 16:03:00.5 -07:00
+  slash: 2026/08/09
+  us: 08-09-2026
+  ym: 2026-08
+  y: 2026
+  sex_time: 23:59:59
+  quoted: "2026-08-09"
+  canon1: 2001-12-15T02:59:43.1Z
+  canon2: 2001-12-14t21:59:43.10-05:00
+  canon3: 2001-12-14 21:59:43.10 -5
+  no_day: 2026-8-9
+  ord: 2026-221
+  week: 2026-W32
+  # Q3.8  Leap-second shaped: 23:59:60 as time component of a timestamp —
+  #       valid YAML timestamp? valid civil time? what does P11 do?
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 4 — THE VOID (NULL CULT, GRADUATE SEMINAR)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q4.1  void_map key count: P11 | R12/CORE | R12D | FS | G12.
+#       List keys for P11 (show that ~ / null / Null / NULL collapse).
+# Q4.2  void_seq: count None vs "" vs "~" vs "null" vs missing/implicit.
+# Q4.3  Empty plain scalar after colon: identical to ~ under P11? under CORE?
+# Q4.4  !!null "" vs !!null "x" vs !!null ~  — construct or error each?
+# Q4.5  Is the empty-string KEY ("") the same as the null KEY (None)? Prove.
+# Q4.6  CORE null set is {~ , null, Null, NULL, empty}. FS: only empty→null
+#       for the !!null tag path; plain ~ is a STRING. Reconcile Q4.1 for FS.
+
+void_map:
+  implicit:
+  spaces_only:   
+  explicit: null
+  title: Null
+  upper: NULL
+  tilde: ~
+  empty_d: ""
+  empty_s: ''
+  str_null: "null"
+  str_tilde: "~"
+  str_Null: "Null"
+  ~ : tilde-key
+  null: null-key
+  Null: Null-key
+  NULL: NULL-key
+  "": empty-string-key
+  !!null "": tagged-null-key-with-empty-value
+
+void_seq:
+  -                         # implicit null
+  - null
+  - Null
+  - NULL
+  - ~
+  - ""
+  - "null"
+  - "Null"
+  - "~"

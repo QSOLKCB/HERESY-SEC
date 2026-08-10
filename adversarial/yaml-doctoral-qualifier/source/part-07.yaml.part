@@ -1,0 +1,181 @@
+#
+# Q19.9  NEW — Differential oracle: write a program that loads the same
+#        bytes with P11 and (R12 or G12) and prints only the keys whose
+#        types or values differ. Run it on Chapters 1–2 fixtures.
+#
+# Q19.10 NEW — Formal: give a denotational sketch
+#        ⟦scalar⟧_schema : String → Value ∪ {error}
+#        for the bool fragment under SPEC11 vs CORE vs P11.
+#        Enough equations to prove: ⟦"y"⟧_SPEC11 ≠ ⟦"y"⟧_P11.
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 20 — THE COMPOSER'S NIGHTMARE (NEW IN v4)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# These questions require thinking in events and nodes, not Python dicts.
+#
+# Q20.1  For the stream below (mentally), list the PARSER EVENTS in order
+#        (StreamStart, DocumentStart, MappingStart, Scalar, Alias, ...).
+#        Do not skip Anchor properties on Scalar events.
+#
+#        ---
+#        a: &x [1, 2]
+#        b: *x
+#        ...
+#
+# Q20.2  At COMPOSE time, how many SequenceNodes exist for Q20.1? How many
+#        after CONSTRUCT? How many Python list objects?
+#
+# Q20.3  Duplicate anchor detection: is it a Composer responsibility?
+#        Show that the second &x never produces a node bound to that name.
+#
+# Q20.4  Merge key expansion: does it happen in Composer or Constructor?
+#        Evidence: can you observe a raw '<<' key with a custom constructor?
+#
+# Q20.5  Implicit resolution: Resolver.choose_value / resolve is invoked with
+#        (tag, value, implicit). For a double-quoted "yes", why is the tag
+#        !!str even under P11? (implicit[0] false for quoted.)
+#
+# Q20.6  Build (on paper) the node graph for final_boss's nested merge
+#        BEFORE construction. Identify where alias pointers vs deep copies
+#        would change mutation semantics.
+#
+# Q20.7  Single-pass rule: why are forward aliases forbidden? Give a
+#        streaming-parser argument (bounded memory) and a graph-coloring
+#        argument (undefined node).
+#
+# Q20.8  Document end `...` then bare scalar without `---`:
+#        which event sequence fires, and why safe_load_all may error.
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 21 — HOST RUNTIME SEMANTICS (NEW IN v4)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# YAML ends at the Constructor. Your language begins.
+#
+# Q21.1  Prove in a REPL:
+#          True == 1 == 1.0
+#          False == 0
+#          hash(True) == hash(1)
+#          float('nan') != float('nan')
+#        Then load a YAML map that exploits each fact.
+#
+# Q21.2  In Go, unmarshaling bool-keyed YAML into map[string]interface{}:
+#        what happens to keys true/false? Into map[interface{}]interface{}?
+#
+# Q21.3  JavaScript yaml libraries: are keys always strings? What happens
+#        to duplicate keys that differ only by YAML type (010 vs 8)?
+#
+# Q21.4  JSON.stringify on a P11-loaded final_boss: which keys/values die?
+#        (bool keys, NaN, Infinity, datetime, bytes, nested cycles)
+#
+# Q21.5  pickle.dumps on a structure with anchors — shared identity preserved?
+#        Contrast with json and with yaml.dump.
+#
+# Q21.6  dataclass / pydantic / attrs models: how do they amplify YAML
+#        type surprises (string "false" vs bool false)? Design a safe loader
+#        policy for API input.
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 22 — OPERATIONAL FORENSICS (NEW IN v4)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q22.1  Incident: a Helm chart sets `enabled: NO` intending Norway ISO code
+#        in one service and a feature flag in another. Both use the same
+#        values.yaml. Write the postmortem sections: Impact, Root Cause
+#        (stage-level), Why Tests Missed It, Remediation, Detection.
+#
+# Q22.2  Incident: config port: 022 connects to port 18. Same template.
+#
+# Q22.3  Incident: CI passes on developer Mac (ruamel 1.2) and fails in
+#        production (PyYAML 1.1) on key counts in a policy map. Differential
+#        diagnosis procedure.
+#
+# Q22.4  Incident: memory explodes when re-serializing a mild-looking YAML
+#        with anchors to JSON. Alias bomb without malicious intent.
+#
+# Q22.5  Propose a linter rule set (yamllint is insufficient) that rejects:
+#        unquoted bool-shaped strings used as enums; leading-zero ints;
+#        sexagesimal; bare merge keys in 1.2-only pipelines; alias depth > N.
+#        Sketch implementation using the event stream API, not regex on text.
+#
+# Q22.6  Should your org ban YAML for inter-service RPC? Defend a nuanced
+#        position that is not "JSON only forever" and not "YAML is fine."
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 23 — RESEARCH PROBLEMS (NEW IN v4 — OPTIONAL HONORS)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# These are open. Partial credit for rigorous framing even without closure.
+#
+# Q23.1  Specify a "Strict Interchange Profile" of YAML suitable for K8s-like
+#        ecosystems: subset of CORE + mandatory quoting rules + banned
+#        features. Show that Norway and 010 cannot occur by construction.
+#
+# Q23.2  Is there a computable bipartite check: given two schemas S1,S2 and
+#        a document D, do ⟦D⟧_S1 and ⟦D⟧_S2 agree on all scalar leaves?
+#        Complexity? Undecidable fragments?
+#
+# Q23.3  Merge keys + anchors + duplicate key policies interact. Write a
+#        small operational semantics that makes the interaction explicit.
+#
+# Q23.4  Survey: compare PyYAML, libyaml, ruamel, go yaml.v3, serde_yaml,
+#        snakeyaml, js-yaml on: bool set, octal, sexagesimal, merge, duplicate
+#        keys, alias bombs, custom tags. Publish a matrix (even if partial).
+#
+# Q23.5  Design a YAML 1.3 proposal that fixes the top three production
+#        foot-guns without breaking Kubernetes. Expect hostility; pre-answer it.
+
+
+# =============================================================================
+# GRADING KEY FRAGMENTS (cursed — do not trust; verify in a REPL)
+# =============================================================================
+# There is no complete answer key on purpose.
+# An answer key written in YAML would itself be ambiguous.
+# The only answer key is a multi-parser REPL + the host language manual.
+#
+# Spot checks under PyYAML 6.x safe_load (verified while authoring v4):
+#
+#   safe_load("1e3")      → str '1e3'        # NOT float — folklore is wrong
+#   safe_load("1.0e3")    → str '1.0e3'      # exponent needs [-+]
+#   safe_load("1.0e+3")   → float 1000.0
+#   safe_load("0755")     → int 493
+#   safe_load("0o755")    → str '0o755'
+#   safe_load("12:34:56") → int 45296
+#   safe_load("60:00")    → int 3600         # leading field may be ≥60
+#   safe_load("0:30")     → str '0:30'       # leading zero field fails int regex
+#   safe_load("1:60")     → str '1:60'       # non-leading field must be 0..59
+#   safe_load("y")        → str 'y'          # P11 ≠ SPEC11
+#   safe_load("yes")      → bool True
+#   safe_load("NO")       → bool False
+#
+#   PY-EQ:
+#     safe_load("true: a\n1: b\n1.0: c\nyes: d") → {True: 'd'}  # one key
+#     safe_load("false: a\n0: b") → {False: 'b'}
+#
+#   NaN keys:
+#     d = safe_load(".nan: x")
+#     list(d)[0] in d → True
+#     float('nan') in d → False
+#
+#   country_lookup length (this file, no mental 1:/0: lines): 7
+#     keys ≈ {False, 'YE', True, 'n', 'y', 'NO', 'oN'}
+#
+#   duplicates length: 5  (y/n stay strings; not 2)
+#
+#   final_boss top-level key count under P11: verify with REPL including
+#     nested as a key; PY-EQ collapses True/1/1.0 and False/0; expect on
+#     the order of 13 entries — LIST them, do not recite folklore.
+#
+#   identity_crisis.final_merge['b']: 20   (first mapping in merge list wins
+#     for keys not already present; mid precedes base and mid.b=20)
+#   identity_crisis.final_merge_rev['b']: 2
+#
+#   Trailing commas: P11 often accepts [1,2,3,] — do not cite "always error".
+#
+# If your answers match a v3 transcript exactly, you did not re-verify.
+# =============================================================================
