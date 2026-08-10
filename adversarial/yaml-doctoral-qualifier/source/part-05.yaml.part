@@ -1,0 +1,200 @@
+  # pwn3: !!python/object/new:tuple [[]]
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 10 — DUPLICATE KEYS, MERGE-INDUCED DUPLICATES, DETECTION TIMING
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q10.1  P11: final key count of `duplicates` AND values for True and False.
+#        WARNING: y/n are NOT bools in P11 — count is NOT 2.
+# Q10.2  R12 default: last-wins or error?
+# Q10.3  R12D / G12: reject how?
+# Q10.4  Is a duplicate introduced ONLY via merge treated like an explicit dup?
+# Q10.5  merge_dup: who wins for name?
+# Q10.6  merge_dup_rev: who wins? (Spec: existing key not overwritten by merge.)
+# Q10.7  DETECTION TIMING: does P11 detect duplicates at compose time or
+#        construct time? (Hint: you never see an error — last-wins silently.
+#        Contrast R12D.)
+# Q10.8  PY-EQ: add keys `1` and `0` to duplicates mentally. New count under P11?
+# Q10.9  G12 unmarshal into struct{} — duplicate field tags?
+
+duplicates:
+  name: alice
+  name: bob
+  name: carol
+
+  yes: 1
+  Yes: 2
+  YES: 3
+  y: 4
+  on: 5
+  On: 6
+  ON: 7
+  true: 8
+  True: 9
+  TRUE: 10
+
+  no: 11
+  No: 12
+  NO: 13
+  n: 14
+  off: 15
+  Off: 16
+  OFF: 17
+  false: 18
+  False: 19
+  FALSE: 20
+
+merge_dup:
+  <<: {name: from-merge, x: 1}
+  name: explicit-wins?
+  y: 2
+
+merge_dup_rev:
+  name: explicit-first
+  <<: {name: from-merge, x: 1}
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 11 — ROUND-TRIP DEGRADATION CHAIN
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Procedure: load P11 → dump default Dumper → load again.
+# For each field: original text → after 1st load → after dump → after 2nd load.
+# Circle irreversible losses.
+#
+# Q11.1  After dump, are &r / &n / << present or expanded?
+# Q11.2  After 2nd load, copy["nest"][0] bool or str?
+# Q11.3  R12RT load → dump → load: which presentation details survive
+#        that P11 destroys? (quotes, anchors, comments if any)
+# Q11.4  yes: yes → dumps as true: true (or similar). Show exact dump bytes.
+# Q11.5  Prove that load∘dump is NOT idempotent on this mapping by
+#        exhibiting a fixed-point failure in ≤3 cycles.
+
+round_trip_landmines:
+  yes: yes
+  mode: 010
+  day: 2026-08-09
+  duration: 1:30:00
+  sci: 1.0e+3
+  sci_trap: 1e3                     # was already a string — stays string?
+  empty:
+  tilde: ~
+  word: null
+  ref: &r {x: 1, nest: &n [yes, NO]}
+  copy:
+    <<: *r
+    y: 2
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 12 — STRINGS THAT LOOK LIKE SYNTAX
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q12.1  Uncomment star_bare — ComposerError undefined alias?
+# Q12.2  Uncomment at / tick — ScannerError reserved indicators?
+# Q12.3  url plain scalar: why is http://example.com legal without quotes
+#        but "http://example.com/path with spaces" needs quotes?
+# Q12.4  ratio 1:2 — sexagesimal int under P11, NOT a ratio string.
+# Q12.5  windows paths: exact repr of windows / windows_s / windows_p.
+# Q12.6  Is a plain scalar starting with `<<` a merge key or a string when
+#        it is a VALUE rather than a KEY?
+
+looks_like_syntax:
+  doc_start: "---"
+  doc_end: "..."
+  comment: "# not a comment"
+  directive: "%YAML 1.2"
+  tag: "!!str"
+  anchor: "&anchor"
+  alias: "*alias"
+  merge: "<<"
+  colon: ":"
+  dash: "-"
+  qmark: "?"
+  bracket: "[this, is, not, a, list]"
+  braces: "{this: is, not: a, map: true}"
+  url: http://example.com
+  url_space: "http://example.com/path"
+  hash_ok: foo#bar
+  hash_cut: foo #bar
+  star: "*not_an_alias"
+  # star_bare: *not_defined
+  amp: "&not_an_anchor"
+  # at: @home
+  # tick: `code`
+  ratio: 1:2
+  ratio_q: "1:2"
+  windows: "C:\\Users\\n"
+  windows_s: 'C:\Users\n'
+  windows_p: C:\Users\n
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 13 — WHITESPACE, ENCODING, HOMOGLYPHS, BIDI
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q13.1  UTF-8 BOM at start of FILE — does P11 accept? Strip or keep?
+# Q13.2  Do any of the homoglyph keys/values resolve as booleans? (Must not.)
+# Q13.3  Null byte in double-quoted scalar — allowed?
+# Q13.4  NBSP (U+00A0) is NOT YAML whitespace. Prove it can be a name char
+#        and can break indentation if used as "indent".
+# Q13.5  NFC vs NFD: two keys that look identical ("é" U+00E9 vs e+combining
+#        acute) — distinct keys? (Yes.) Security implication for allow-lists?
+# Q13.6  bidi override U+202E — display spoofing in logs; value still exact?
+# Q13.7  Line break normalization: does YAML convert CRLF/CR to LF inside
+#        plain/folded/double-quoted scalars? Cite behavior per style.
+#        Deep dive on folded + chomping + CI hashing: see Q7.11.
+
+whitespace_crimes:
+  trail: "hello    "
+  lead: "    hello"
+  only_sp: "    "
+  only_tab: "\t\t\t"
+  mixed: " \t \t "
+  nl: "one\ntwo\nthree"
+  crlf: "one\r\ntwo"
+  cr: "one\rtwo"
+  ff: "nope\fstill"
+  nbsp: "\u00A0between"
+  zwsp: "a\u200Bb"
+  bom_like: "\uFEFFstart"
+  cyrillic_yes: уes
+  fullwidth_no: ＮＯ
+  greek_nu: ΝO
+  homoglyph_true: truе
+  bidi: "a\u202Esecret"
+  nullbyte: "a\u0000b"
+  nfc_key: café
+  # nfd_key: cafe\u0301     # mentally: same glyphs, different bytes
+  # Q13.8  If both nfc_key and nfd_key present, key count under P11?
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 14 — SCHEMA TRINITY (ACTUALLY A PENTACHOTOMY)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Answer for the SAME scalar under: FS | JS | CORE | SPEC11 | P11.
+# Full table required. This chapter alone can fail a defense.
+
+schema_trinity:
+  - yes
+  - true
+  - NO
+  - "NO"
+  - y
+  - n
+  - on
+  - 010
+  - 0o10
+  - 0x10
+  - 0b10
+  - 12:34:56
+  - 60:00
+  - 0:30
+  - 1e3
+  - 1.0e+3
+  - .inf
+  - .nan
+  - null
+  - ~
