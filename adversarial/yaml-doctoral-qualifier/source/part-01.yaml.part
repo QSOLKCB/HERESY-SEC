@@ -1,0 +1,200 @@
+# =============================================================================
+# YAML DOCTORAL QUALIFYING EXAMINATION
+# Formal Semantics, Parser Differential Behaviour, Canonicalization,
+# and Adversarial Edge Cases
+# =============================================================================
+# Also known as: THE CURSED YAML EXAM — PhD DISSERTATION MODE (v4)
+# Supersedes: Nightmare Mode (v3). The v3 answer key has been weaponized.
+#
+# CANDIDATE INSTRUCTIONS
+#   This examination is open-specification. Confidence without justification
+#   will be penalized. 😂
+#
+#   Every non-trivial claim requires: parser, version, loader class, result,
+#   and pipeline stage. "I think" is not a citation. Paste REPL output or
+#   fail the oral. Attractive nuisances from blogs, prior transcripts, and
+#   your own muscle memory have been planted deliberately.
+#
+# You (or a prior examinee) already survived Norway, sexagesimal clocks, and
+# the public admission that YAML is an Eldritch nightmare. That was the
+# qualifier. This is the defense.
+#
+# DESIGN INTENT
+#   v3 tested whether you knew that parsers disagree.
+#   v4 tests whether you understand WHY, at which pipeline stage the world
+#   bifurcates, and what still breaks when every "well-known" trap is quoted.
+#
+#   Several v3 "answers" in the wild are wrong. This version plants those
+#   wrong answers as attractive nuisances. If you copy a blog, a prior
+#   transcript, or your own muscle memory without re-verifying in a REPL
+#   on THIS machine, you will fail spectacularly.
+#
+# PIPELINE STAGES (you must name which stage fails or mutates):
+#   1. SCANNER   — tokens, indentation, indicators, escapes
+#   2. PARSER    — events, block/flow context, document boundaries
+#   3. COMPOSER  — nodes, anchors/aliases, single-pass graph
+#   4. RESOLVER  — implicit tag selection (schema-dependent regexes)
+#   5. CONSTRUCTOR — Python/Go/JS values, hashability, merges
+#   6. REPRESENTER/DUMPER — irreversible presentation loss
+#
+# PARSERS UNDER TEST (answer for EACH unless a question says otherwise):
+#   P11   = PyYAML yaml.safe_load          (YAML 1.1 resolver; last-key-wins)
+#   P11C  = PyYAML CSafeLoader             (libyaml C; same schema, syntax edges)
+#   P11F  = PyYAML FullLoader              (still no arbitrary Python objects;
+#                                           more YAML-types-repo tags)
+#   P11U  = PyYAML unsafe Loader/load()    (the RCE museum — sandbox only)
+#   R12   = ruamel.yaml typ='safe' ~1.2    (core-ish; often re-adds merge keys)
+#   R12D  = ruamel + DuplicateKeyError
+#   R12RT = ruamel typ='rt'                (round-trip; preserves some presentation)
+#   G12   = Go gopkg.in/yaml.v3            (1.2 core; key uniqueness often strict)
+#   G12u  = Go yaml.v2                     (1.1-ish legacy — still in the wild)
+#   JS    = YAML 1.2 JSON Schema mode
+#   FS    = YAML 1.2 Failsafe              (ONLY map / seq / str)
+#   CORE  = YAML 1.2 Core Schema           (spec-ideal; not any one library)
+#   SPEC11= YAML 1.1 specification ideal   (not PyYAML — grade the DELTA)
+#
+# HOST LANGUAGE TRAPS (PhD required — "YAML did it" is insufficient):
+#   PY-EQ  Python dict key equality: True == 1 == 1.0, False == 0,
+#          and float('nan') != float('nan'). These are NOT YAML collisions;
+#          they are host-runtime collisions AFTER successful construction.
+#   JS-NUM IEEE-754 Number (no ints); keys always strings in JSON.stringify.
+#   GO-MAP typed maps reject heterogeneous keys; interface{} maps are slippery.
+#
+# SCORING
+#   +1   correct type+value for one parser
+#   +3   correctly name the pipeline STAGE that diverges
+#   +5   correct key-count including HOST-language collisions (mark PY-EQ)
+#   +8   identity graph: which aliases share id() / pointer equality
+#   +13  formal differential table (FS / JS / CORE / SPEC11 / P11) with zero misses
+#   +21  construct a document meeting a multi-parser cardinality constraint
+#   -5   missed silent key collision
+#   -10  claimed two parsers "basically the same"
+#   -15  cited v3 grading folklore without re-verification
+#   -25  treated SPEC11 and P11 as identical for bools OR floats
+#   INSTANT FAIL: "YAML is simple" / "just use JSON" without tears
+#   INSTANT FAIL: "1e3 is obviously a float" without running a REPL
+#
+# METHOD REQUIREMENT
+#   Every non-trivial claim needs: (parser, version, loader class, result, stage).
+#   "I think" is not a citation. Paste REPL output or fail the oral.
+#
+# Time limit: one production outage, one dissertation chapter, or until tenure.
+# =============================================================================
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 0 — DIRECTIVES, TAG HANDLES, AND THE LIE OF VERSION NEGOTIATION
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Real %YAML / %TAG lines are commented so this file still loads as one
+# primary document (plus intentional multi-docs later). Mentally uncomment.
+#
+# Q0.1  File begins with `%YAML 1.2` but you call P11 safe_load.
+#       (a) Which schema actually runs?
+#       (b) At which pipeline STAGE is the directive consumed or ignored?
+#       (c) Does P11C differ from pure P11 here?
+#
+# Q0.2  `%TAG !e! tag:example.com,2026:` then `foo: !e!widget bar`
+#       Resolved tag URI on foo's value? Primary vs secondary tag handle rules?
+#
+# Q0.3  `%TAG !! tag:example.com,2026:`  (rebind the PRIMARY handle !!)
+#       Then `x: !!str yes`. Is the value a string, or tag:example.com,2026:str?
+#       Does safe_load allow rebinding !! ?
+#
+# Q0.4  Second document starts with `%YAML 1.1` after a first document said 1.2.
+#       Spec: are schemas allowed to change mid-stream?
+#       P11: does anything actually change?
+#
+# Q0.5  Place `%YAML 1.2` AFTER `---` (illegal).
+#       P11 / G12 / R12: error, warn, or plain scalar beginning with %?
+#       Name the stage.
+#
+# Q0.6  Two TAG directives define the same handle. Spec violation —
+#       ComposerError? ParserError? Last-wins? Silent?
+#
+# Q0.7  PROVE or REFUTE: "If every implementation honored %YAML, Norway
+#       would be fixed by writing %YAML 1.2 at the top of Helm charts."
+#       Your answer must address (i) directive support, (ii) merge keys,
+#       (iii) ecosystem inertia.
+#
+# %YAML 1.2
+# %TAG !e! tag:example.com,2026:
+# ---
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 1 — NORWAY INDUSTRIAL COMPLEX (WITH HOST-LANGUAGE FALLOUT)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q1.1  Type+value of EVERY sequence element under P11, R12/CORE, FS, SPEC11.
+#       Four columns. SPEC11 ≠ P11 for y/n — if you merge those columns, -25.
+#
+# Q1.2  After P11 load, how many DISTINCT bool True values (value equality)?
+# Q1.3  Is element index 0 (NO) the same Python type as index 6 ("NO")?
+# Q1.4  Map length under: P11 | SPEC11 | R12/CORE | R12D | FS | G12.
+#       List the actual P11 keys before peeking at any key at the bottom.
+# Q1.5  P11: country_lookup[False]? [True]? ['y']? ['n']? ['oN']?
+# Q1.6  R12: country_lookup["NO"] — quoted or unquoted winner? (last-wins)
+# Q1.7  FS: are true / True / YES all plain strings AND all distinct keys?
+# Q1.8  PY-EQ BOMB: after P11 load, evaluate:
+#         country_lookup[1]     # you never wrote the key 1
+#         country_lookup[1.0]
+#         country_lookup[0]
+#         country_lookup[False]
+#       Explain using Python's bool-as-int subclass relationship.
+#       At which stage does this collision appear? (Hint: not the resolver.)
+# Q1.9  G12: unmarshal into map[string]interface{} vs map[interface{}]interface{}.
+#       Which bool-key forms survive? Which become string keys?
+# Q1.10 Oral: why did PyYAML DROP y|Y|n|N from the 1.1 bool regex while
+#       keeping yes/no/on/off? Cite the operational failure mode (CI, locale,
+#       single-letter country codes are NOT the full story — dig).
+
+countries_i_have_visited:
+  - NO
+  - YE
+  - on
+  - off
+  - n
+  - y
+  - "NO"
+  - NO
+  - true
+  - True
+  - TRUE
+  - yes
+  - Yes
+  - YES
+  - On
+  - oN              # mixed case — in P11 regex? in SPEC11?
+  - nO
+  - YeS
+  - OFF
+  - Off
+  - oFf
+  - Y               # SPEC11 bool; P11?
+  - N
+  - ON
+  - FALSE
+
+country_lookup:
+  NO: unquoted-NO
+  YE: Yemen
+  on: Ontario
+  off: feature-off
+  n: letter-n
+  y: letter-y
+  "NO": quoted-NO
+  true: lower-true
+  True: title-true
+  TRUE: upper-true
+  yes: lower-yes
+  Yes: title-yes
+  YES: upper-yes
+  On: title-on
+  oN: mixed-on
+  OFF: upper-off
+  false: lower-false
+  False: title-false
+  FALSE: upper-false
+  # Q1.11  Mentally insert these two lines and recompute P11 key count:
+  # 1: integer-one
