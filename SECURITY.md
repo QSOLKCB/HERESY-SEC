@@ -13,3 +13,16 @@ Profile v2 policy maps and thresholds are security-critical configuration. Treat
 weight map change, window change, fixture-set change or threshold change as a reviewed
 policy release. Unknown fields, missing weighted labels and any learning mode fail
 closed.
+
+## Adversarial parser corpora
+
+Static adversarial corpora under `adversarial/` are defensive regression material, not
+trusted configuration. They may describe unsafe parser constructions, ambiguous scalar
+semantics, recursive aliases or resource-expansion scenarios for analysis. Default CI
+must verify their byte identity and containment without executing unsafe loaders,
+custom object constructors or candidate-generated payloads.
+
+Any live parser-differential work derived from those corpora should run in a disposable
+offline sandbox with explicit dependency versions, no credentials, bounded CPU/memory/
+time and no writable production paths. The normal HERESY-SEC runtime remains
+standard-library-only, offline and non-executing.
