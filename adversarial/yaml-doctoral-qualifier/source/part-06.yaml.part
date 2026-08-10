@@ -1,0 +1,200 @@
+  - 2026-08-09
+  - 1.2.3
+  - 5.
+  - 1_000
+  - ""
+  - "true"
+  - "010"
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 15 — FINAL BOSS (KEY COUNT, PY-EQ, NaN, RECURSION)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q15.1  P11 key count of final_boss (top level only, ignore nested content
+#        for the count but nested is still a key). INCLUDE PY-EQ collapses:
+#        True≡1≡1.0, False≡0≡0.0 (bool/int/float). Your number must match
+#        a REPL on PyYAML 6.x — folklore "11" or "13" without PY-EQ analysis
+#        is insufficient; show the key list.
+# Q15.2  R12/CORE key count (no bool/int PY-EQ for yes/no — but Python host
+#        still has True≡1 if any int keys remain!).
+# Q15.3  R12D: load at all?
+# Q15.4  P11: final_boss[True], [False], [8], [None], [754] values.
+# Q15.5  nested merges *boss — list every key in nested under P11; note
+#        recursive self-key "nested" via merge.
+# Q15.6  Uncomment recursive_merge — P11? G12? RecursionError at which op?
+# Q15.7  1.0 vs 1 keys — PY-EQ single entry; last wins. Value?
+# Q15.8  .nan AS KEY: k in d for the actual key object? float('nan') in d?
+#        d.get(float('nan'))? Explain IEEE + Python dict lookup.
+# Q15.9  After load, final_boss[1] and final_boss[1.0] and final_boss[True]
+#        — same cell? Prove with `is` or identity of returned values.
+# Q15.10 G12: does encoding/json of the loaded structure survive, or do
+#        bool keys / NaN break encoding/json?
+
+final_boss: &boss
+  yes: no
+  no: yes
+  on: off
+  off: on
+  y: n
+  n: y
+  YES: NO
+  NO: YES
+  true: false
+  false: true
+  ON: OFF
+  OFF: ON
+  True: False
+  False: True
+  TRUE: FALSE
+  FALSE: TRUE
+
+  010: 0x10
+  0o10: 0b10
+  12:34: 1.0e+3
+  -0: .inf
+  .nan: -.Inf
+  00: +0
+  1.0: 1
+  1: 1.0
+
+  2026-08-09: 12:34:56
+
+  ~: null
+  null: ~
+  "": ~
+  Null: NULL
+
+  "<<": not-merge-just-string
+
+  nested:
+    <<: *boss
+    survivor: true
+    # recursive_merge:
+    #   <<: *boss
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 16 — MULTI-DOCUMENT STREAM & COMPOSER RULES
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q16.1  yaml.safe_load(open(this_file)) → error. Which error? Why?
+#        (Careful: if the file begins with a non-comment plain line, the
+#        FIRST document may be a scalar banner. This edition uses # banners.)
+# Q16.2  list(yaml.safe_load_all(...)) → how many documents?
+# Q16.3  Document 2 `truth` and `port` types under P11 vs R12.
+# Q16.4  Document 3 fully quoted — types identical across parsers?
+# Q16.5  Content after `...` without new `---`: error or ignored?
+# Q16.5b With leading `---` before a fourth doc — document count?
+# Q16.6  Completely empty document (just ---): load_all yields None?
+# Q16.7  Anchor defined in doc 2, aliased in doc 3 — legal? (No across docs.)
+# Q16.8  Explicit ... then another ... — empty docs?
+
+---
+document: 2
+truth: yes
+port: 022
+feature: on
+country: NO
+sci: 1e3
+sci_real: 1.0e+3
+---
+document: 3
+truth: "yes"
+port: "022"
+feature: "on"
+country: "NO"
+sci: "1e3"
+...
+# Q16.5  Mentally uncomment:
+# document: 4
+# orphan: true
+#
+# Q16.5b Also try with leading --- before document: 4.
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 17 — SPEC VS IMPLEMENTATION (THE BETRAYAL, EXTENDED)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q17.0a  Re-grade Chapter 1 under (a) SPEC11 (b) P11. Key counts differ.
+# Q17.0b  Mixed-case oN / nO / YeS / oFf / Y / N: in P11 regex? SPEC11?
+# Q17.0c  Name FOUR places where SPEC11 ≠ P11.
+#         Required seeds: bool y/n; float 1e3 / 1.0e3; duplicate anchors;
+#         sequence keys; %YAML directive; !!pairs availability.
+# Q17.0d  G12 / G12u / libyaml / ruamel: who follows 1.1 y/n, who is 1.2-only?
+# Q17.0e  FLOAT CORRIGENDUM: write the P11 float implicit-resolver regex
+#         (or an accurate paraphrase) and show why 1e3 and 1.0e3 fail it
+#         while 1.0e+3 matches.
+# Q17.0f  Sexagesimal int regex: why is 60:00 an int but 1:60 a str?
+# Q17.0g  Trailing commas in flow: spec-illegal; P11 often accepts. Classify
+#         as bug, extension, or libyaml quirk — with evidence (P11 vs P11C).
+# Q17.0h  Merge keys removed from 1.2 types. Why do R12 and G12 still accept
+#         << ? "Compatibility" is incomplete — name the ecosystem artifacts
+#         (Kubernetes strategic merge, Ansible, docker-compose, Helm).
+#
+# This chapter is worth more than the rest. Production bugs live here.
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 18 — PARSER DIFFERENTIAL (ORAL DEFENSE)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# No YAML fixtures. Prose only. Cite behavior, not vibes.
+#
+# Q18.1  Three scalars that change VALUE (not merely type) between 1.1 and 1.2.
+# Q18.2  Why safe_load exists; which tags it refuses; FullLoader vs SafeLoader.
+# Q18.3  Merge keys in 1.2 libraries — justify retention.
+# Q18.4  country: NO in K8s/Ansible can flip feature flags. Reference 1.1
+#        bool vocabulary AND the P11 y/n deviation AND PY-EQ True≡1.
+# Q18.5  Five defensive rules so Go yaml.v3 and PyYAML agree.
+# Q18.6  FS vs JS vs CORE for a multi-language config — pick one and defend.
+# Q18.7  load this exam with P11, dump, load with R12 — blast radius essay.
+# Q18.8  Multi-merge order rule; quote "unless the key already exists."
+# Q18.9  TOML vs JSON vs YAML — costs. "YAML is simple" still instant fail.
+# Q18.10 Billion laughs / alias bomb: is YAML vulnerable without custom tags?
+#        Distinguish exponential NODE expansion via aliases from entity bombs.
+#        Does safe_load protect you? What operational controls remain?
+# Q18.11 Design a 20-line conformance suite that would have caught the
+#        Norway problem, the 010 octal problem, AND the 1e3 float folklore
+#        in CI. Show the YAML + assertions (pytest or go test).
+# Q18.12 When is "quote everything" the wrong mitigation?
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 19 — WRITE YOUR OWN WEAPON (DISSERTATION ARTIFACTS)
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Q19.1  ≤10-line document such that:
+#          - P11 loads a mapping with key count ≤ 3
+#          - CORE/R12 loads a mapping with ≥ 6 keys
+#          - G12 matches R12 or rejects duplicates
+#        Paste it + REPL transcript for P11 and R12.
+#
+# Q19.2  Document VALID under Failsafe, INVALID under Core (or vice versa).
+#
+# Q19.3  Recursive structure via anchors that:
+#          - loads under P11
+#          - raises on json.dumps
+#          - dumps under yaml.dump WITH anchors preserved (show dump)
+#
+# Q19.4  One REAL CVE/postmortem (Norway, billion laughs, PyYAML RCE,
+#        Kubernetes YAML ambiguity, Ansible bools, etc.). Cite. One paragraph
+#        on failure mode + which pipeline stage failed the human operators.
+#
+# Q19.5  Monkey-patch P11 bool resolver to full SPEC11 (include y/n).
+#        Show patch. Explain why shipping it in production is a second curse.
+#
+# Q19.6  NEW — PY-EQ weapon: ≤8-line document that loads under P11 with
+#        exactly ONE key, where the source text appears to contain at least
+#        four distinct key tokens drawn from {true, True, yes, 1, 1.0, on}.
+#        Prove len(data)==1 and list the tokens you used.
+#
+# Q19.7  NEW — NaN key laboratory: document with .nan key; demonstrate
+#        that the key is un-lookupable via float('nan') yet appears in
+#        .keys(). Provide a correct lookup method.
+#
+# Q19.8  NEW — Alias bomb: construct a ≤15-line YAML whose fully expanded
+#        value tree would exceed 10^6 leaf nodes if aliases were deep-copied,
+#        but whose P11 load finishes in <100ms because of shared identity.
+#        Measure id() sharing. Discuss why dump or json conversion may still DoS.
