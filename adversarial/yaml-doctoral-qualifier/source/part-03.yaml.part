@@ -1,0 +1,200 @@
+  -
+  -
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 5 — ANCHORS, ALIASES, MERGE KEYS, IDENTITY GRAPH
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Draw the identity graph after P11 load. For each pair: id(a)==id(b)?
+# Mutate one; does the other change? Dump+reload: does identity survive?
+#
+# Q5.1  service_b["flags"] same object as defaults["flags"]?
+# Q5.2  id(life)==id(life2)? (interning trap — prefer box/box2)
+# Q5.3  box2.append(99); contents of box?
+# Q5.4  Uncomment s2. P11 (≥5/6) vs ancient PyYAML vs R12 vs G12.
+# Q5.4b Forward alias before anchor: ComposerError or deferred?
+# Q5.5  multi-merge <<: [*mid, *base] — which b wins? Quote the rule.
+# Q5.6  reverse order — different b?
+# Q5.7  Uncomment bad_merge: exception class P11 vs G12.
+# Q5.8  Quoted "<<" — merge or string key?
+# Q5.9  Uncomment scalar_merge: explode how?
+# Q5.10 json.dumps(recursive) — what happens?
+# Q5.11 yaml.dump(recursive) under P11 — loop or re-emit anchors?
+# Q5.12 later_key_alias value?
+# Q5.13 `? *life` as explicit key — int 42 key? which stage allows it?
+# Q5.14 MERGE + TYPE POLLUTION: after load, type of service_a["country"]
+#       and service_a["debug"] under P11 vs R12. Merge copies NODES, not
+#       re-resolves scalars — defend or refute that claim with an experiment.
+# Q5.15 ANCHOR SCOPE: is an anchor visible across documents in one stream
+#       under P11 load_all? (Compose a two-doc experiment.)
+# Q5.16 Overwrite: mid defines b: 20 AFTER <<: *base. Spec says explicit
+#       keys override merge. Show mid['b'] and prove merge did not clobber.
+
+identity_crisis:
+  defaults: &defaults
+    retries: 3
+    timeout: 30
+    debug: no
+    country: NO
+    flags: &flaglist [yes, no, on]
+
+  service_a:
+    <<: *defaults
+    name: a
+    debug: yes
+
+  service_b:
+    <<: *defaults
+    name: b
+
+  life: &life 42
+  life2: *life
+  box: &box [42]
+  box2: *box
+  flag: &flag yes
+  flag2: *flag
+
+  s1: &shadow one
+  # s2: &shadow two
+  s3: *shadow
+
+  # early: *forward
+  # late: &forward "defined later"
+
+  base: &base {a: 1, b: 2}
+  mid: &mid
+    <<: *base
+    b: 20
+    c: 3
+  final_merge:
+    <<: [*mid, *base]
+    d: 4
+  final_merge_rev:
+    <<: [*base, *mid]
+    d: 4
+
+  # bad_merge:
+  #   <<: [1, 2, 3]
+
+  not_a_merge:
+    "<<": *defaults
+    real: value
+
+  # scalar_merge:
+  #   <<: *life
+
+  recursive: &rec
+    name: ouroboros
+    self: *rec
+
+  &kkey keyname: with-anchor-on-key
+  later_key_alias: *kkey
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 6 — COMPLEX KEYS & THE HASHABILITY CONSPIRACY
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Folk wisdom: "? [a, b]" becomes a Python tuple key.
+# Stock P11 safe_load / FullLoader / Loader: ConstructorError unhashable key.
+# (Some custom constructors / other languages convert seq→tuple.)
+#
+# Q6.1  Predict load success vs exception for each key form below.
+# Q6.2  For commented forms, name the exception class and STAGE.
+# Q6.3  Which parsers (if any) auto-convert sequence keys to hashable tuples?
+# Q6.4  Do the two null keys collide?
+# Q6.5  !!str yes vs bare yes under P11? under R12?
+# Q6.6  bare true vs bare yes under P11 (both → True)? under R12?
+# Q6.7–Q6.10  Uncomment one at a time; record exceptions.
+# Q6.11 PY-EQ: after load, complex_keys[1] — does it hit the yes/true key?
+# Q6.12 G12: can you unmarshal a bool-keyed map into map[bool]any?
+#       Into struct with yaml tags? Show the failure mode.
+
+complex_keys:
+  ? yes
+  : bool-true-key
+
+  ? NO
+  : norway-or-false-key
+
+  ? 010
+  : octal-or-decimal-key
+
+  ? 2026-08-09
+  : date-or-string-key
+
+  ? ~
+  : null-key-a
+
+  ? null
+  : null-key-b
+
+  ? !!str yes
+  : forced-string-yes-key
+
+  ? |-
+      multi
+      line
+  : block-scalar-key
+
+  ? true
+  : another-bool-true
+
+  # ? [primary, key]
+  # : list-as-key
+
+  # ? {role: admin, level: 1}
+  # : map-as-key-unhashable
+
+  # ? [true, false, NO, "NO"]
+  # : list-of-bools-as-key
+
+  # ? [ &ck 1, *ck, *ck ]
+  # : key-with-internal-aliases
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# CHAPTER 7 — BLOCK SCALARS, CHOMPING, INDENTATION INDICATORS
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#
+# Write EXACT Python repr() for each value under P11.
+# Q7.0  Define clip vs strip vs keep for trailing newlines in one sentence each.
+# Q7.1  Uncomment tab_indent — error class + stage (scanner).
+# Q7.2  Which of escapes_d / escapes_s / escapes_p contains a real newline?
+# Q7.3  ind2: explain what the "2" means when the first content line is
+#       more indented than 2 — error or relative?
+# Q7.4  fold_more_indent: show exact repr; explain "more-indented ⇒ literal NL".
+# Q7.5  contains_markers: prove --- / ... inside a block scalar do NOT
+#       introduce documents (load_all document count unchanged).
+# Q7.6  empty_lit vs empty_fold — identical? chomping default?
+# Q7.7  |+ with multiple trailing blank lines — how many \n in the value?
+# Q7.8  R12RT: does round-trip preserve chomping indicator |+ vs | ?
+#
+# Q7.11 WINDOWS LINE ENDINGS × FOLDED SCALARS × CHOMPING (Gemini polish)
+#       Spec: parsers MUST normalize non-ASCII line breaks and CRLF/CR to
+#       a single LF (`\n`) on input (YAML 1.2 §5.4 / 1.1 §5.13 "Line Breaks").
+#       That rule is easy to recite and easy to get wrong under chomping.
+#
+#       Build these inputs in a REPL (do NOT rely on your editor's EOL mode):
+#         doc_fold   = "f: >\r\n  one\r\n  long\r\n"
+#         doc_strip  = "f: >-\r\n  one\r\n  long\r\n"
+#         doc_keep   = "f: >+\r\n  one\r\n  long\r\n\r\n"
+#         doc_lit    = "f: |\r\n  one\r\n  long\r\n"
+#         doc_blank  = "f: >\r\n  para one\r\n\r\n  para two\r\n"
+#       Then safe_load under P11 and R12.
+#
+#       Q7.11a  For each document: exact Python repr of f. Confirm ZERO `\r`
+#               bytes remain. Which pipeline STAGE performed the normalization?
+#       Q7.11b  Does `>-` vs `>+` change anything BEYOND the trailing-newline
+#               count when the source used CRLF? (chomping is defined on the
+#               *normalized* break stream — prove or refute with repr.)
+#       Q7.11c  fold vs lit under CRLF: after load, is fold still space-joined
+#               and lit still newline-joined? Same as LF-only source?
+#       Q7.11d  doc_blank: blank-line paragraph separation under CRLF — still
+#               one `\n\n` in the value, or does a leftover `\r` create `\n\r\n`?
+#       Q7.11e  CI HASH TRAP: sha256(value.encode()) of a folded secret/config
+#               string. A Windows checkout that rewrote the *YAML file* to CRLF
+#               must yield the SAME hash as a Unix LF checkout after load, or
+#               the pipeline is non-portable. Does it? Show both hashes.
+#       Q7.11f  COUNTERTRAP: double-quoted `"one\r\ntwo"` embeds a LITERAL
